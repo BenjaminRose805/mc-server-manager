@@ -1,0 +1,19 @@
+{
+  "name": "mc-server-manager",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w @mc-server-manager/backend\" \"npm run dev -w @mc-server-manager/frontend\"",
+    "build": "npm run build -w @mc-server-manager/shared && npm run build -w @mc-server-manager/backend && npm run build -w @mc-server-manager/frontend",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.0"
+  }
+}
