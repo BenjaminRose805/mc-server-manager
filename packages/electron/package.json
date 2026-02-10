@@ -1,0 +1,114 @@
+{
+  "name": "@mc-server-manager/electron",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop app wrapper for MC Server Manager",
+  "author": "MC Server Manager",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "electron dist/main.js",
+    "dist": "electron-builder",
+    "dist:win": "cd ../../node_modules/better-sqlite3 && npx prebuild-install --platform win32 --arch x64 --runtime electron --target 33.4.11 && cd - && electron-builder --win",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
+  },
+  "dependencies": {
+    "@mc-server-manager/backend": "*",
+    "@mc-server-manager/shared": "*"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.0"
+  },
+  "build": {
+    "appId": "com.mc-server-manager.app",
+    "productName": "MC Server Manager",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "!dist/tsconfig.tsbuildinfo"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend/dist",
+        "to": "backend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../backend/migrations",
+        "to": "backend/migrations",
+        "filter": [
+          "**/*.sql"
+        ]
+      },
+      {
+        "from": "../frontend/dist",
+        "to": "frontend/dist",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../../shared/dist",
+        "to": "shared/dist",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Game"
+    },
+    "publish": null,
+    "asar": true,
+    "nodeGypRebuild": false,
+    "npmRebuild": false
+  }
+}

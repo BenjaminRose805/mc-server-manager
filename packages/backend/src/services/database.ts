@@ -1,8 +1,8 @@
-import Database from 'better-sqlite3';
-import fs from 'node:fs';
-import path from 'node:path';
-import { config } from '../config.js';
-import { logger } from '../utils/logger.js';
+import Database from "better-sqlite3";
+import fs from "node:fs";
+import path from "node:path";
+import { config } from "../config.js";
+import { logger } from "../utils/logger.js";
 
 let db: Database.Database;
 
@@ -19,11 +19,11 @@ export function initDatabase(): Database.Database {
   db = new Database(config.dbPath);
 
   // Enable WAL mode for better performance with concurrent reads
-  db.pragma('journal_mode = WAL');
+  db.pragma("journal_mode = WAL");
   // Enable foreign keys
-  db.pragma('foreign_keys = ON');
+  db.pragma("foreign_keys = ON");
 
-  logger.info({ dbPath: config.dbPath }, 'Database connected');
+  logger.info({ dbPath: config.dbPath }, "Database connected");
 
   runMigrations(db);
 
@@ -35,7 +35,7 @@ export function initDatabase(): Database.Database {
  */
 export function getDb(): Database.Database {
   if (!db) {
-    throw new Error('Database not initialized. Call initDatabase() first.');
+    throw new Error("Database not initialized. Call initDatabase() first.");
   }
   return db;
 }
@@ -46,7 +46,7 @@ export function getDb(): Database.Database {
 export function closeDatabase(): void {
   if (db) {
     db.close();
-    logger.info('Database connection closed');
+    logger.info("Database connection closed");
   }
 }
 
@@ -66,31 +66,37 @@ function runMigrations(database: Database.Database): void {
     );
   `);
 
-  // Find migration files
-  const migrationsDir = path.resolve(
-    path.dirname(new URL(import.meta.url).pathname),
-    '..', '..', 'migrations'
-  );
+  const migrationsDir =
+    process.env.MC_MIGRATIONS_DIR ??
+    path.resolve(
+      path.dirname(new URL(import.meta.url).pathname),
+      "..",
+      "..",
+      "migrations",
+    );
 
   if (!fs.existsSync(migrationsDir)) {
-    logger.warn({ migrationsDir }, 'Migrations directory not found');
+    logger.warn({ migrationsDir }, "Migrations directory not found");
     return;
   }
 
-  const files = fs.readdirSync(migrationsDir)
-    .filter(f => f.endsWith('.sql'))
+  const files = fs
+    .readdirSync(migrationsDir)
+    .filter((f) => f.endsWith(".sql"))
     .sort(); // Alphabetical sort ensures 001_ comes before 002_, etc.
 
   // Get already-applied migrations
   const applied = new Set(
-    database.prepare('SELECT name FROM _migrations').all()
-      .map((row: any) => row.name)
+    database
+      .prepare("SELECT name FROM _migrations")
+      .all()
+      .map((row: any) => row.name),
   );
 
   // Apply new migrations inside a transaction
   const applyMigration = database.transaction((name: string, sql: string) => {
     database.exec(sql);
-    database.prepare('INSERT INTO _migrations (name) VALUES (?)').run(name);
+    database.prepare("INSERT INTO _migrations (name) VALUES (?)").run(name);
   });
 
   for (const file of files) {
@@ -98,14 +104,14 @@ function runMigrations(database: Database.Database): void {
       continue;
     }
 
-    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
-    logger.info({ migration: file }, 'Applying migration');
+    const sql = fs.readFileSync(path.join(migrationsDir, file), "utf-8");
+    logger.info({ migration: file }, "Applying migration");
 
     try {
       applyMigration(file, sql);
-      logger.info({ migration: file }, 'Migration applied successfully');
+      logger.info({ migration: file }, "Migration applied successfully");
     } catch (err) {
-      logger.error({ migration: file, err }, 'Migration failed');
+      logger.error({ migration: file, err }, "Migration failed");
       throw err;
     }
   }
