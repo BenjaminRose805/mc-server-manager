@@ -38,11 +38,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build shared types
-        run: npm run build -w @mc-server-manager/shared
-
-      - name: Build backend
-        run: npm run build -w @mc-server-manager/backend
+      - name: Build shared + backend (project references)
+        run: npx tsc -b packages/backend/tsconfig.json
 
       - name: Package backend sidecar
         run: npm run package-backend -w @mc-server-manager/desktop
