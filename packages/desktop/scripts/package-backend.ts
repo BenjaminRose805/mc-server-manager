@@ -55,12 +55,22 @@ execSync(
 );
 
 console.log("Copying native modules...");
-cpSync(
+const sqliteNodePaths = [
   join(
     backendDir,
     "node_modules/better-sqlite3/build/Release/better_sqlite3.node",
   ),
-  join(binariesDir, "better_sqlite3.node"),
-);
+  join(
+    rootDir,
+    "node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+  ),
+];
+const sqliteNode = sqliteNodePaths.find(existsSync);
+if (!sqliteNode) {
+  throw new Error(
+    `better_sqlite3.node not found in:\n${sqliteNodePaths.join("\n")}`,
+  );
+}
+cpSync(sqliteNode, join(binariesDir, "better_sqlite3.node"));
 
 console.log(`Backend packaged: ${outputName}`);
