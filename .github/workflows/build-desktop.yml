@@ -41,6 +41,9 @@ jobs:
       - name: Build shared types
         run: npm run build -w @mc-server-manager/shared
 
+      - name: Build backend
+        run: npm run build -w @mc-server-manager/backend
+
       - name: Package backend sidecar
         run: npm run package-backend -w @mc-server-manager/desktop
 

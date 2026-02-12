@@ -1,5 +1,5 @@
 import { execSync } from "child_process";
-import { cpSync, mkdirSync } from "fs";
+import { cpSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -32,14 +32,20 @@ const binariesDir = join(__dirname, "..", "src-tauri", "binaries");
 const ext = process.platform === "win32" ? ".exe" : "";
 const outputName = `mc-server-backend-${rustTarget}${ext}`;
 
-console.log("Building shared types...");
-execSync("npm run build -w @mc-server-manager/shared", {
-  cwd: rootDir,
-  stdio: "inherit",
-});
+const sharedDist = join(rootDir, "shared", "dist", "index.js");
+if (!existsSync(sharedDist)) {
+  console.log("Building shared types...");
+  execSync("npm run build -w @mc-server-manager/shared", {
+    cwd: rootDir,
+    stdio: "inherit",
+  });
+}
 
-console.log("Building backend...");
-execSync("npm run build", { cwd: backendDir, stdio: "inherit" });
+const backendDist = join(backendDir, "dist", "index.js");
+if (!existsSync(backendDist)) {
+  console.log("Building backend...");
+  execSync("npm run build", { cwd: backendDir, stdio: "inherit" });
+}
 
 console.log(`Packaging backend for ${pkgTarget}...`);
 mkdirSync(binariesDir, { recursive: true });
