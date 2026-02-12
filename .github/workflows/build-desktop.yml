@@ -3,17 +3,6 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
-    inputs:
-      platforms:
-        description: 'Platforms to build'
-        required: false
-        default: 'all'
-        type: choice
-        options:
-          - all
-          - windows
-          - linux
-          - macos
 
 jobs:
   build:
@@ -31,10 +20,6 @@ jobs:
             target: x86_64-pc-windows-msvc
             label: windows
     runs-on: ${{ matrix.os }}
-    if: >-
-      github.event_name == 'push' ||
-      github.event.inputs.platforms == 'all' ||
-      github.event.inputs.platforms == matrix.label
     steps:
       - uses: actions/checkout@v4
 
