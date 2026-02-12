@@ -39,7 +39,7 @@ jobs:
         run: npm ci
 
       - name: Build shared + backend (project references)
-        run: npx tsc -b packages/backend/tsconfig.json
+        run: npx tsc -b packages/backend/tsconfig.json --force
 
       - name: Package backend sidecar
         run: npm run package-backend -w @mc-server-manager/desktop
