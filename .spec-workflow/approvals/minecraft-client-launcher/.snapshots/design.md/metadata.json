@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/minecraft-client-launcher/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-11T23:34:42.470Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770852882464_83sdptnua",
+      "approvalTitle": "EPIC-3 Minecraft Client Launcher - Design"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-11T23:38:57.502Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770852882464_83sdptnua",
+      "approvalTitle": "EPIC-3 Minecraft Client Launcher - Design"
+    }
+  ]
+}

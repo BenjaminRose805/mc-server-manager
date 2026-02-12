@@ -6,7 +6,14 @@
     <title>MC Server Manager</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-loading" style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#e2e8f0;font-family:system-ui;">
+        <div style="text-align:center">
+          <div style="font-size:24px;font-weight:600;margin-bottom:8px">MC Server Manager</div>
+          <div style="font-size:14px;opacity:0.6">Starting...</div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

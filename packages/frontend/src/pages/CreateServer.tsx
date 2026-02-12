@@ -19,6 +19,7 @@ import type {
   SystemInfo,
   DownloadRequest,
   ForgeVersionInfo,
+  NeoForgeVersionInfo,
 } from "@mc-server-manager/shared";
 import { checkJavaMcCompat } from "@mc-server-manager/shared";
 import { api } from "@/api/client";
@@ -87,6 +88,12 @@ const SERVER_TYPES: {
     id: "forge",
     name: "Forge",
     description: "The classic modding platform with the largest mod ecosystem.",
+    available: true,
+  },
+  {
+    id: "neoforge",
+    name: "NeoForge",
+    description: "Modern fork of Forge for Minecraft 1.20.2+.",
     available: true,
   },
 ];
@@ -183,7 +190,7 @@ export function CreateServer() {
             selected={state.serverType}
             onSelect={(t) => {
               update("serverType", t);
-              if (t !== "forge") {
+              if (t !== "forge" && t !== "neoforge") {
                 update("forgeVersion", "");
               }
             }}
@@ -376,7 +383,13 @@ function VersionStep({
   const [search, setSearch] = useState("");
 
   const [forgeInfo, setForgeInfo] = useState<ForgeVersionInfo | null>(null);
+  const [neoforgeInfo, setNeoforgeInfo] = useState<NeoForgeVersionInfo | null>(
+    null,
+  );
   const [forgeLoading, setForgeLoading] = useState(false);
+
+  const needsLoaderVersion =
+    serverType === "forge" || serverType === "neoforge";
 
   useEffect(() => {
     setLoading(true);
@@ -396,25 +409,37 @@ function VersionStep({
   }, [serverType, showSnapshots]);
 
   useEffect(() => {
-    if (serverType !== "forge" || !selected) {
+    if (!needsLoaderVersion || !selected) {
       setForgeInfo(null);
+      setNeoforgeInfo(null);
       onForgeVersionSelect("");
       return;
     }
     setForgeLoading(true);
     onForgeVersionSelect("");
     api
-      .getVersionInfo("forge", selected)
+      .getVersionInfo(serverType, selected)
       .then((info) => {
-        const fi = info as ForgeVersionInfo;
-        setForgeInfo(fi);
-        if (fi.latest) {
-          onForgeVersionSelect(fi.latest);
+        if (serverType === "neoforge") {
+          const ni = info as NeoForgeVersionInfo;
+          setNeoforgeInfo(ni);
+          setForgeInfo(null);
+          if (ni.latest) {
+            onForgeVersionSelect(ni.latest);
+          }
+        } else {
+          const fi = info as ForgeVersionInfo;
+          setForgeInfo(fi);
+          setNeoforgeInfo(null);
+          if (fi.latest) {
+            onForgeVersionSelect(fi.latest);
+          }
         }
         setForgeLoading(false);
       })
       .catch(() => {
         setForgeInfo(null);
+        setNeoforgeInfo(null);
         setForgeLoading(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -511,6 +536,15 @@ function VersionStep({
         />
       )}
 
+      {serverType === "neoforge" && selected && (
+        <NeoForgeVersionPicker
+          neoforgeInfo={neoforgeInfo}
+          loading={forgeLoading}
+          selected={forgeVersion}
+          onSelect={onForgeVersionSelect}
+        />
+      )}
+
       <div className="mt-8 flex items-center justify-between">
         <button
           onClick={onBack}
@@ -521,7 +555,7 @@ function VersionStep({
         </button>
         <button
           onClick={onNext}
-          disabled={!selected || (serverType === "forge" && !forgeVersion)}
+          disabled={!selected || (needsLoaderVersion && !forgeVersion)}
           className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Next
@@ -674,6 +708,80 @@ function ForgeVersionPicker({
           className="mt-2 text-xs text-zinc-400 hover:text-zinc-200"
         >
           Show all {forgeInfo.forgeVersions.length} versions...
+        </button>
+      )}
+    </div>
+  );
+}
+
+function NeoForgeVersionPicker({
+  neoforgeInfo,
+  loading,
+  selected,
+  onSelect,
+}: {
+  neoforgeInfo: NeoForgeVersionInfo | null;
+  loading: boolean;
+  selected: string;
+  onSelect: (v: string) => void;
+}) {
+  const [showAll, setShowAll] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="mt-4 flex items-center gap-2 text-sm text-zinc-400">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading NeoForge versions...
+      </div>
+    );
+  }
+
+  if (!neoforgeInfo) return null;
+
+  const displayVersions = showAll
+    ? neoforgeInfo.neoforgeVersions
+    : neoforgeInfo.neoforgeVersions.slice(0, 12);
+
+  return (
+    <div className="mt-6">
+      <h4 className="text-sm font-semibold text-zinc-200">NeoForge Version</h4>
+      <p className="mt-1 text-xs text-zinc-400">
+        Select a NeoForge build for this Minecraft version.
+      </p>
+
+      <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-6">
+        {displayVersions.map((v) => {
+          const isSelected = v === selected;
+          const isLatest = v === neoforgeInfo.latest;
+          return (
+            <button
+              key={v}
+              onClick={() => onSelect(v)}
+              className={cn(
+                "relative rounded-md border px-3 py-1.5 text-center text-xs transition-colors",
+                isSelected
+                  ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
+                  : "border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800",
+              )}
+            >
+              {v}
+              {isLatest && (
+                <span
+                  className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-emerald-400"
+                  title="Latest"
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {!showAll && neoforgeInfo.neoforgeVersions.length > 12 && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="mt-2 text-xs text-zinc-400 hover:text-zinc-200"
+        >
+          Show all {neoforgeInfo.neoforgeVersions.length} versions...
         </button>
       )}
     </div>
@@ -949,6 +1057,14 @@ function buildDownloadRequest(
     case "forge":
       if (!forgeVersion) throw new Error("Forge version is required");
       return { serverId, mcVersion, serverType: "forge", forgeVersion };
+    case "neoforge":
+      if (!forgeVersion) throw new Error("NeoForge version is required");
+      return {
+        serverId,
+        mcVersion,
+        serverType: "neoforge",
+        neoforgeVersion: forgeVersion,
+      };
   }
 }
 
@@ -1082,7 +1198,10 @@ function CreateStep({
         {phase === "review" && "Review & Create"}
         {phase === "creating" && "Creating Server..."}
         {phase === "downloading" && "Downloading Server JAR..."}
-        {phase === "installing" && "Installing Forge..."}
+        {phase === "installing" &&
+          (state.serverType === "neoforge"
+            ? "Installing NeoForge..."
+            : "Installing Forge...")}
         {phase === "done" && "Server Created!"}
         {phase === "error" && "Error"}
       </h3>
@@ -1099,6 +1218,9 @@ function CreateStep({
             <SummaryRow label="Minecraft Version" value={state.mcVersion} />
             {state.serverType === "forge" && state.forgeVersion && (
               <SummaryRow label="Forge Version" value={state.forgeVersion} />
+            )}
+            {state.serverType === "neoforge" && state.forgeVersion && (
+              <SummaryRow label="NeoForge Version" value={state.forgeVersion} />
             )}
             <SummaryRow label="Server Name" value={state.name} />
             <SummaryRow label="Port" value={String(state.port)} />
@@ -1177,7 +1299,9 @@ function CreateStep({
               {phase === "downloading" &&
                 `Downloading server JAR... ${progress}%`}
               {phase === "installing" &&
-                "Running Forge installer... this may take a few minutes"}
+                (state.serverType === "neoforge"
+                  ? "Running NeoForge installer... this may take a few minutes"
+                  : "Running Forge installer... this may take a few minutes")}
             </span>
           </div>
 
@@ -1192,7 +1316,9 @@ function CreateStep({
               <p className="mt-2 text-xs text-zinc-500">
                 {phase === "downloading"
                   ? `Downloading Minecraft ${state.mcVersion} server JAR...`
-                  : "Installing Forge libraries and patching server..."}
+                  : state.serverType === "neoforge"
+                    ? "Installing NeoForge libraries and patching server..."
+                    : "Installing Forge libraries and patching server..."}
               </p>
             </div>
           )}

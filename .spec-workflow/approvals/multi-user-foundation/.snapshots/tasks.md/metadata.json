@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/multi-user-foundation/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T00:15:50.346Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770855350337_deixr6j6w",
+      "approvalTitle": "EPIC-5: Multi-User Foundation — Tasks Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T00:16:44.368Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770855350337_deixr6j6w",
+      "approvalTitle": "EPIC-5: Multi-User Foundation — Tasks Document"
+    }
+  ]
+}

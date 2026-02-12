@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router';
+import { useEffect, useState } from "react";
+import { Link, Outlet, useLocation } from "react-router";
 import {
+  Gamepad2,
   LayoutDashboard,
   Menu,
+  Package,
   Plus,
   Server,
   Settings,
   X,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useServerStore, initWebSocket } from '@/stores/serverStore';
-import { StatusBadge } from './StatusBadge';
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useServerStore, initWebSocket } from "@/stores/serverStore";
+import { StatusBadge } from "./StatusBadge";
 
 export function Layout() {
   const location = useLocation();
@@ -28,8 +30,10 @@ export function Layout() {
   }, [location.pathname]);
 
   const navItems = [
-    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/settings', label: 'Settings', icon: Settings },
+    { to: "/", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/launcher", label: "Launcher", icon: Gamepad2 },
+    { to: "/mods", label: "Mods", icon: Package },
+    { to: "/settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -44,7 +48,9 @@ export function Layout() {
         </button>
         <div className="ml-3 flex items-center gap-2">
           <Server className="h-4 w-4 text-emerald-400" />
-          <span className="text-sm font-bold tracking-tight">MC Server Manager</span>
+          <span className="text-sm font-bold tracking-tight">
+            MC Server Manager
+          </span>
         </div>
       </div>
 
@@ -59,9 +65,9 @@ export function Layout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-zinc-800 bg-zinc-900 transition-transform duration-200 ease-in-out',
-          'lg:translate-x-0',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-zinc-800 bg-zinc-900 transition-transform duration-200 ease-in-out",
+          "lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         {/* Logo */}
@@ -92,10 +98,10 @@ export function Layout() {
                   <Link
                     to={item.to}
                     className={cn(
-                      'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                       active
-                        ? 'bg-zinc-800 text-zinc-100'
-                        : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200',
+                        ? "bg-zinc-800 text-zinc-100"
+                        : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200",
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -126,21 +132,23 @@ export function Layout() {
             ) : (
               <ul className="space-y-0.5">
                 {servers.map((server) => {
-                  const active =
-                    location.pathname === `/servers/${server.id}`;
+                  const active = location.pathname === `/servers/${server.id}`;
                   return (
                     <li key={server.id}>
                       <Link
                         to={`/servers/${server.id}`}
                         className={cn(
-                          'flex items-center justify-between rounded-md px-3 py-1.5 text-sm transition-colors',
+                          "flex items-center justify-between rounded-md px-3 py-1.5 text-sm transition-colors",
                           active
-                            ? 'bg-zinc-800 text-zinc-100'
-                            : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200',
+                            ? "bg-zinc-800 text-zinc-100"
+                            : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200",
                         )}
                       >
                         <span className="truncate">{server.name}</span>
-                        <StatusBadge status={server.status} className="ml-2 scale-90" />
+                        <StatusBadge
+                          status={server.status}
+                          className="ml-2 scale-90"
+                        />
                       </Link>
                     </li>
                   );

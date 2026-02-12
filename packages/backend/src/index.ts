@@ -5,6 +5,15 @@ import { initDatabase, closeDatabase } from "./services/database.js";
 import { serverManager } from "./services/server-manager.js";
 import { setupWebSocketServer } from "./ws/index.js";
 import { getAllServers } from "./models/server.js";
+import {
+  startPeriodicUpdateCheck,
+  stopPeriodicUpdateCheck,
+} from "./services/modpack-update-checker.js";
+import https from "node:https";
+import { setupTLS } from "./services/tls.js";
+import { setupPortForwarding, removePortForwarding } from "./services/upnp.js";
+import { cleanupExpiredSessions } from "./services/session.js";
+import { cleanupOldAttempts } from "./services/brute-force.js";
 import type { Server as HttpServer } from "node:http";
 import type { WebSocketServer } from "ws";
 
@@ -13,6 +22,7 @@ import "./providers/vanilla.js";
 import "./providers/paper.js";
 import "./providers/fabric.js";
 import "./providers/forge.js";
+import "./providers/neoforge.js";
 
 export { app } from "./app.js";
 export { config } from "./config.js";
@@ -24,19 +34,35 @@ export { setupWebSocketServer } from "./ws/index.js";
  * Start the HTTP server and attach WebSocket server.
  * Returns { httpServer, wss } for the caller to manage.
  */
-export function startServer(
+export async function startServer(
   port?: number,
   host?: string,
 ): Promise<{ httpServer: HttpServer; wss: WebSocketServer }> {
   const p = port ?? config.port;
   const h = host ?? config.host;
 
+  const tlsResult = await setupTLS(config.tls, config.dataDir);
+
   return new Promise((resolve) => {
-    const httpServer = app.listen(p, h, () => {
-      logger.info(`Backend server running at http://${h}:${p}`);
-      logger.info(`Health check: http://${h}:${p}/api/health`);
-      resolve({ httpServer, wss });
-    });
+    let httpServer: HttpServer;
+
+    if (tlsResult) {
+      httpServer = https.createServer(
+        { cert: tlsResult.cert, key: tlsResult.key },
+        app,
+      );
+      httpServer.listen(p, h, () => {
+        logger.info(`Backend server running at https://${h}:${p}`);
+        logger.info(`Health check: https://${h}:${p}/api/health`);
+        resolve({ httpServer, wss });
+      });
+    } else {
+      httpServer = app.listen(p, h, () => {
+        logger.info(`Backend server running at http://${h}:${p}`);
+        logger.info(`Health check: http://${h}:${p}/api/health`);
+        resolve({ httpServer, wss });
+      });
+    }
 
     const wss = setupWebSocketServer(httpServer);
   });
@@ -110,14 +136,36 @@ if (isStandaloneEntry) {
   const { httpServer, wss } = await startServer();
 
   autoStartServers();
+  startPeriodicUpdateCheck();
 
-  // Graceful shutdown
+  const cleanupInterval = setInterval(
+    () => {
+      try {
+        cleanupExpiredSessions();
+        cleanupOldAttempts();
+      } catch (err) {
+        logger.error({ err }, "Periodic cleanup failed");
+      }
+    },
+    60 * 60 * 1000,
+  );
+
+  if (config.upnpEnabled) {
+    setupPortForwarding(config.port).catch((err) => {
+      logger.error({ err }, "UPnP port forwarding failed");
+    });
+  }
+
   const shutdown = async () => {
+    stopPeriodicUpdateCheck();
+    clearInterval(cleanupInterval);
+    if (config.upnpEnabled) {
+      await removePortForwarding(config.port);
+    }
     await shutdownServer(httpServer, wss);
     process.exit(0);
   };
 
-  // Force exit after 60 seconds (need time for MC servers to stop)
   const forceExit = () => {
     setTimeout(() => {
       logger.warn("Forced exit after timeout");

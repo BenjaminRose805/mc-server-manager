@@ -1,7 +1,8 @@
 import type {
   WsClientMessage,
   WsServerMessage,
-} from '@mc-server-manager/shared';
+} from "@mc-server-manager/shared";
+import { isTauri } from "../utils/tauri";
 
 // ---------------------------------------------------------------------------
 // WebSocket client singleton with automatic reconnection
@@ -28,8 +29,12 @@ class WsClient {
   /** Lazily build the URL on first connect so we never touch `window` at import time */
   private getUrl(): string {
     if (!this.url) {
-      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      this.url = `${proto}//${window.location.host}/ws`;
+      if (isTauri()) {
+        this.url = "ws://localhost:3001/ws";
+      } else {
+        const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+        this.url = `${proto}//${window.location.host}/ws`;
+      }
     }
     return this.url;
   }
@@ -41,7 +46,11 @@ class WsClient {
 
   /** Connect (or reconnect) the WebSocket */
   connect(): void {
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+    if (
+      this.ws &&
+      (this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING)
+    ) {
       return; // already connected / connecting
     }
 
@@ -51,6 +60,13 @@ class WsClient {
     this.ws.onopen = () => {
       this._connected = true;
       this.reconnectDelay = BASE_RECONNECT_MS; // reset backoff
+
+      // Send auth token as first message (required by backend WS auth)
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        this.ws!.send(JSON.stringify({ type: "auth", token }));
+      }
+
       for (const h of this.connectHandlers) h();
     };
 

@@ -6,21 +6,25 @@
  * and runs a periodic stats interval.
  */
 
-import { WebSocketServer, type WebSocket } from 'ws';
-import type { Server as HttpServer } from 'node:http';
+import { WebSocketServer, type WebSocket } from "ws";
+import type { Server as HttpServer } from "node:http";
 import type {
   WsConsoleLine,
   WsStatusChange,
   WsStats,
-} from '@mc-server-manager/shared';
-import { serverManager } from '../services/server-manager.js';
-import { logger } from '../utils/logger.js';
+  WsModpackProgress,
+  WsModpackUpdateAvailable,
+} from "@mc-server-manager/shared";
+import { serverManager } from "../services/server-manager.js";
+import { eventBus } from "../services/event-bus.js";
+import { logger } from "../utils/logger.js";
 import {
   handleMessage,
   handleDisconnect,
+  initAuth,
   getSubscriptions,
   sendMessage,
-} from './handlers.js';
+} from "./handlers.js";
 
 /** Stats broadcast interval in milliseconds. */
 const STATS_INTERVAL_MS = 10_000;
@@ -34,28 +38,32 @@ let statsInterval: ReturnType<typeof setInterval> | null = null;
 export function setupWebSocketServer(httpServer: HttpServer): WebSocketServer {
   const wss = new WebSocketServer({
     server: httpServer,
-    path: '/ws',
+    path: "/ws",
   });
 
-  logger.info('WebSocket server attached at /ws');
+  logger.info("WebSocket server attached at /ws");
 
   // ---- Connection handling ----
 
-  wss.on('connection', (ws: WebSocket) => {
-    logger.info({ clients: wss.clients.size }, 'WebSocket client connected');
+  wss.on("connection", (ws: WebSocket) => {
+    logger.info({ clients: wss.clients.size }, "WebSocket client connected");
+    initAuth(ws);
 
-    ws.on('message', (data: Buffer | string) => {
-      const raw = typeof data === 'string' ? data : data.toString();
+    ws.on("message", (data: Buffer | string) => {
+      const raw = typeof data === "string" ? data : data.toString();
       handleMessage(ws, raw);
     });
 
-    ws.on('close', () => {
+    ws.on("close", () => {
       handleDisconnect(ws);
-      logger.info({ clients: wss.clients.size }, 'WebSocket client disconnected');
+      logger.info(
+        { clients: wss.clients.size },
+        "WebSocket client disconnected",
+      );
     });
 
-    ws.on('error', (err) => {
-      logger.error({ err }, 'WebSocket client error');
+    ws.on("error", (err) => {
+      logger.error({ err }, "WebSocket client error");
     });
   });
 
@@ -63,18 +71,22 @@ export function setupWebSocketServer(httpServer: HttpServer): WebSocketServer {
 
   wireServerManagerEvents(wss);
 
+  // ---- Wire event bus → broadcast modpack progress ----
+
+  wireEventBus(wss);
+
   // ---- Periodic stats broadcast ----
 
   startStatsInterval(wss);
 
   // ---- Cleanup on server close ----
 
-  wss.on('close', () => {
+  wss.on("close", () => {
     if (statsInterval) {
       clearInterval(statsInterval);
       statsInterval = null;
     }
-    logger.info('WebSocket server closed');
+    logger.info("WebSocket server closed");
   });
 
   return wss;
@@ -85,7 +97,11 @@ export function setupWebSocketServer(httpServer: HttpServer): WebSocketServer {
 /**
  * Send a message to all clients subscribed to a specific server.
  */
-function broadcast(wss: WebSocketServer, serverId: string, message: unknown): void {
+function broadcast(
+  wss: WebSocketServer,
+  serverId: string,
+  message: unknown,
+): void {
   for (const client of wss.clients) {
     const ws = client as WebSocket;
     const subs = getSubscriptions(ws);
@@ -102,7 +118,7 @@ function wireServerManagerEvents(wss: WebSocketServer): void {
   // Console output → broadcast to subscribers
   serverManager.onConsole((serverId, entry) => {
     const msg: WsConsoleLine = {
-      type: 'console',
+      type: "console",
       serverId,
       line: entry.line,
       timestamp: entry.timestamp,
@@ -113,7 +129,7 @@ function wireServerManagerEvents(wss: WebSocketServer): void {
   // Status changes → broadcast to subscribers
   serverManager.onStatus((serverId, status) => {
     const msg: WsStatusChange = {
-      type: 'status',
+      type: "status",
       serverId,
       status,
     };
@@ -124,7 +140,7 @@ function wireServerManagerEvents(wss: WebSocketServer): void {
   serverManager.onPlayers((serverId, players) => {
     const proc = serverManager.getProcess(serverId);
     const msg: WsStats = {
-      type: 'stats',
+      type: "stats",
       serverId,
       playerCount: players.length,
       players,
@@ -132,6 +148,36 @@ function wireServerManagerEvents(wss: WebSocketServer): void {
     };
     broadcast(wss, serverId, msg);
   });
+}
+
+function wireEventBus(wss: WebSocketServer): void {
+  eventBus.on("modpack:progress", (serverId, progress) => {
+    const msg: WsModpackProgress = {
+      type: "modpack:progress",
+      serverId,
+      jobId: progress.jobId,
+      status: progress.status,
+      totalMods: progress.totalMods,
+      installedMods: progress.installedMods,
+      currentMod: progress.currentMod,
+      error: progress.error,
+    };
+    broadcast(wss, serverId, msg);
+  });
+
+  eventBus.on(
+    "modpack:update",
+    (serverId, modpackId, latestVersionId, latestVersionNumber) => {
+      const msg: WsModpackUpdateAvailable = {
+        type: "modpack:update",
+        serverId,
+        modpackId,
+        latestVersionId,
+        latestVersionNumber,
+      };
+      broadcast(wss, serverId, msg);
+    },
+  );
 }
 
 /**
@@ -153,12 +199,12 @@ function startStatsInterval(wss: WebSocketServer): void {
     // Send stats for each subscribed server that has an active process
     for (const serverId of subscribedServers) {
       const proc = serverManager.getProcess(serverId);
-      if (!proc || (proc.status !== 'running' && proc.status !== 'starting')) {
+      if (!proc || (proc.status !== "running" && proc.status !== "starting")) {
         continue;
       }
 
       const msg: WsStats = {
-        type: 'stats',
+        type: "stats",
         serverId,
         playerCount: proc.playerCount,
         players: proc.players,

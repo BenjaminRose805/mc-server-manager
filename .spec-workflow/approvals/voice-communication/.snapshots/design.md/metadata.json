@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/voice-communication/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T00:38:29.351Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770856709333_xq6an8be9",
+      "approvalTitle": "EPIC-8: Voice Communication — Design Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T00:39:20.015Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770856709333_xq6an8be9",
+      "approvalTitle": "EPIC-8: Voice Communication — Design Document"
+    }
+  ]
+}

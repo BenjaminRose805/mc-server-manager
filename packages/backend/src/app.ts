@@ -8,23 +8,53 @@ import { serversRouter } from "./routes/servers.js";
 import { versionsRouter } from "./routes/versions.js";
 import { downloadsRouter } from "./routes/downloads.js";
 import { logsRouter } from "./routes/logs.js";
+import { modsRouter, serverModsRouter } from "./routes/mods.js";
+import { modpacksRouter, serverModpacksRouter } from "./routes/modpacks.js";
+import { launcherRouter } from "./routes/launcher.js";
+import { instanceModsRouter } from "./routes/instance-mods.js";
+import { acmeRouter } from "./routes/acme.js";
+import { authRouter } from "./routes/auth.js";
+import { usersRouter } from "./routes/users.js";
+import { invitationsRouter } from "./routes/invitations.js";
+import { helmetConfig } from "./middleware/security.js";
+import { corsOptions } from "./middleware/cors-config.js";
+import { apiRateLimit, authRateLimit } from "./middleware/rate-limit.js";
 import { AppError } from "./utils/errors.js";
 import { logger } from "./utils/logger.js";
 
 export const app = express();
 
-app.use(cors());
+// ACME challenge route — must be before any auth middleware (publicly accessible)
+app.use(acmeRouter);
+
+// Security middleware
+app.use(helmetConfig);
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Rate limiting
+app.use("/api", apiRateLimit);
+app.use("/api/auth", authRateLimit);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+app.use("/api/auth", authRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/invitations", invitationsRouter);
 
 app.use("/api/system", systemRouter);
 app.use("/api/servers", serversRouter);
 app.use("/api/versions", versionsRouter);
 app.use("/api/downloads", downloadsRouter);
 app.use("/api/servers", logsRouter);
+app.use("/api/mods", modsRouter);
+app.use("/api/servers", serverModsRouter);
+app.use("/api/modpacks", modpacksRouter);
+app.use("/api/servers", serverModpacksRouter);
+app.use("/api/launcher", launcherRouter);
+app.use("/api/launcher", instanceModsRouter);
 
 if (process.env.NODE_ENV === "production") {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));

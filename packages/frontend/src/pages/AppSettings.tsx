@@ -4,9 +4,12 @@ import {
   Check,
   Coffee,
   Cpu,
+  Eye,
+  EyeOff,
   FolderOpen,
   HardDrive,
   Loader2,
+  Package,
   RotateCcw,
   Save,
   ScrollText,
@@ -295,6 +298,55 @@ export function AppSettings() {
             </div>
           </SettingGroup>
 
+          {/* ── CurseForge API Key ──────────────────────────────── */}
+          <CurseForgeKeyField
+            value={form.curseforgeApiKey ?? ""}
+            onChange={(v) => updateField("curseforgeApiKey", v)}
+          />
+
+          {/* ── Modpack Settings ───────────────────────────────────── */}
+          <SettingGroup
+            icon={Package}
+            title="Modpack Settings"
+            description="Options for modpack installation"
+          >
+            <label className="flex items-center gap-3 cursor-pointer">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.showOverridePreview ?? false}
+                onClick={() =>
+                  updateField(
+                    "showOverridePreview",
+                    !(form.showOverridePreview ?? false),
+                  )
+                }
+                className={cn(
+                  "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
+                  form.showOverridePreview ? "bg-emerald-600" : "bg-zinc-700",
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform",
+                    form.showOverridePreview
+                      ? "translate-x-4"
+                      : "translate-x-0",
+                  )}
+                />
+              </button>
+              <div>
+                <span className="text-sm text-zinc-200">
+                  Show override file preview
+                </span>
+                <p className="text-xs text-zinc-500">
+                  When installing modpacks, show a file-by-file preview of
+                  config overrides before applying them.
+                </p>
+              </div>
+            </label>
+          </SettingGroup>
+
           {/* ── System Info ────────────────────────────────────────── */}
           {systemInfo && (
             <SettingGroup
@@ -387,6 +439,62 @@ function SettingGroup({
 // ---------------------------------------------------------------------------
 // Read-only info card
 // ---------------------------------------------------------------------------
+
+function CurseForgeKeyField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [showKey, setShowKey] = useState(false);
+
+  return (
+    <SettingGroup
+      icon={Package}
+      title="CurseForge API Key"
+      description="Enables searching and installing mods from CurseForge"
+    >
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <input
+            type={showKey ? "text" : "password"}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Enter your CurseForge API key"
+            spellCheck={false}
+            autoComplete="off"
+            className="flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-200 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500"
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey(!showKey)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+          >
+            {showKey ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+            {showKey ? "Hide" : "Show"}
+          </button>
+        </div>
+        <p className="text-xs text-zinc-500">
+          Optional. Get a free API key at{" "}
+          <a
+            href="https://console.curseforge.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-zinc-400 underline hover:text-zinc-300"
+          >
+            console.curseforge.com
+          </a>{" "}
+          to enable CurseForge mod search.
+        </p>
+      </div>
+    </SettingGroup>
+  );
+}
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (

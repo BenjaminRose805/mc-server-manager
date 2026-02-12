@@ -9,13 +9,16 @@
 import type { WebSocket } from "ws";
 import type {
   WsClientMessage,
-  WsMessage,
   WsConsoleHistory,
   WsStatusChange,
   WsCommandAck,
   WsError,
+  UserRole,
 } from "@mc-server-manager/shared";
 import { serverManager } from "../services/server-manager.js";
+import { verifyAccessToken } from "../services/jwt.js";
+import { getPermission } from "../models/server-permission.js";
+import { countUsers } from "../models/user.js";
 import { logger } from "../utils/logger.js";
 
 /**
@@ -23,6 +26,13 @@ import { logger } from "../utils/logger.js";
  * WeakMap so entries are automatically cleaned up when the socket is GC'd.
  */
 const clientSubscriptions = new WeakMap<WebSocket, Set<string>>();
+
+const authenticatedClients = new WeakMap<
+  WebSocket,
+  { id: string; username: string; role: UserRole }
+>();
+
+const authTimeouts = new WeakMap<WebSocket, NodeJS.Timeout>();
 
 // ---- Public helpers for broadcasting ----
 
@@ -50,16 +60,31 @@ export function sendMessage(ws: WebSocket, message: unknown): void {
   }
 }
 
+// ---- Auth ----
+
+/**
+ * Initialize auth timeout for a new WebSocket connection.
+ * If no auth message is received within 5 seconds, close the connection.
+ */
+export function initAuth(ws: WebSocket): void {
+  const timeout = setTimeout(() => {
+    if (!authenticatedClients.has(ws)) {
+      ws.close(4001, "Auth timeout");
+    }
+  }, 5_000);
+  authTimeouts.set(ws, timeout);
+}
+
 // ---- Message handling ----
 
 /**
  * Handle an incoming message from a client.
  */
 export function handleMessage(ws: WebSocket, raw: string): void {
-  let msg: WsClientMessage;
+  let msg: Record<string, unknown>;
 
   try {
-    msg = JSON.parse(raw) as WsClientMessage;
+    msg = JSON.parse(raw) as Record<string, unknown>;
   } catch {
     sendMessage(ws, {
       type: "error",
@@ -78,29 +103,75 @@ export function handleMessage(ws: WebSocket, raw: string): void {
     return;
   }
 
+  if (msg.type === "auth") {
+    const timeout = authTimeouts.get(ws);
+    if (timeout) {
+      clearTimeout(timeout);
+      authTimeouts.delete(ws);
+    }
+
+    const payload = verifyAccessToken(msg.token as string);
+    if (!payload) {
+      sendMessage(ws, {
+        type: "error",
+        message: "Invalid or expired token",
+        code: "AUTH_FAILED",
+      } satisfies WsError);
+      ws.close(4001, "Auth failed");
+      return;
+    }
+
+    authenticatedClients.set(ws, {
+      id: payload.sub,
+      username: payload.username,
+      role: payload.role,
+    });
+    sendMessage(ws, { type: "auth:ok" });
+    return;
+  }
+
+  if (!authenticatedClients.has(ws) && countUsers() > 0) {
+    sendMessage(ws, {
+      type: "error",
+      message: "Not authenticated",
+      code: "NOT_AUTHENTICATED",
+    } satisfies WsError);
+    return;
+  }
+
   switch (msg.type) {
     case "subscribe":
-      handleSubscribe(ws, msg.serverId);
+      handleSubscribe(ws, (msg as unknown as WsClientMessage).serverId);
       break;
     case "unsubscribe":
-      handleUnsubscribe(ws, msg.serverId);
+      handleUnsubscribe(ws, (msg as unknown as WsClientMessage).serverId);
       break;
     case "command":
-      handleCommand(ws, msg.serverId, (msg as { command: string }).command);
+      handleCommand(
+        ws,
+        (msg as unknown as WsClientMessage).serverId,
+        (msg as { command: string }).command,
+      );
       break;
     default:
       sendMessage(ws, {
         type: "error",
-        message: `Unknown message type: "${(msg as WsMessage).type}"`,
+        message: `Unknown message type: "${msg.type as string}"`,
         code: "UNKNOWN_TYPE",
       } satisfies WsError);
   }
 }
 
 /**
- * Clean up subscriptions when a client disconnects.
+ * Clean up subscriptions and auth state when a client disconnects.
  */
 export function handleDisconnect(ws: WebSocket): void {
+  const timeout = authTimeouts.get(ws);
+  if (timeout) {
+    clearTimeout(timeout);
+    authTimeouts.delete(ws);
+  }
+  authenticatedClients.delete(ws);
   clientSubscriptions.delete(ws);
 }
 
@@ -114,6 +185,19 @@ function handleSubscribe(ws: WebSocket, serverId: string): void {
       code: "MISSING_SERVER_ID",
     } satisfies WsError);
     return;
+  }
+
+  const user = authenticatedClients.get(ws);
+  if (user && user.role !== "owner" && user.role !== "admin") {
+    const perm = getPermission(serverId, user.id);
+    if (!perm?.canView) {
+      sendMessage(ws, {
+        type: "error",
+        message: "No permission to view this server",
+        code: "PERMISSION_DENIED",
+      } satisfies WsError);
+      return;
+    }
   }
 
   const subs = getSubscriptions(ws);
@@ -173,6 +257,19 @@ function handleCommand(ws: WebSocket, serverId: string, command: string): void {
       code: "MISSING_COMMAND",
     } satisfies WsError);
     return;
+  }
+
+  const user = authenticatedClients.get(ws);
+  if (user && user.role !== "owner" && user.role !== "admin") {
+    const perm = getPermission(serverId, user.id);
+    if (!perm?.canConsole) {
+      sendMessage(ws, {
+        type: "error",
+        message: "No permission to use console on this server",
+        code: "PERMISSION_DENIED",
+      } satisfies WsError);
+      return;
+    }
   }
 
   try {

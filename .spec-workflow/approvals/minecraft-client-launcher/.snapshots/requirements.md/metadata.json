@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/minecraft-client-launcher/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-11T23:30:03.925Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770852603917_hr8qfkanx",
+      "approvalTitle": "EPIC-3 Minecraft Client Launcher - Requirements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-11T23:32:45.785Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770852603917_hr8qfkanx",
+      "approvalTitle": "EPIC-3 Minecraft Client Launcher - Requirements"
+    }
+  ]
+}

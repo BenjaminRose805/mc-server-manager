@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/client-mod-management/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-11T23:47:04.133Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770853624125_787pimdsa",
+      "approvalTitle": "EPIC-4 Client Mod Management - Requirements"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-11T23:48:22.654Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770853624125_787pimdsa",
+      "approvalTitle": "EPIC-4 Client Mod Management - Requirements"
+    }
+  ]
+}

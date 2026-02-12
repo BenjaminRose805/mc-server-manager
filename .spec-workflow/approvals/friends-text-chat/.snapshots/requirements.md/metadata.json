@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/friends-text-chat/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T00:18:22.937Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770855502926_oz1wotufd",
+      "approvalTitle": "EPIC-6: Friends & Text Chat — Requirements Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T00:19:39.637Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770855502926_oz1wotufd",
+      "approvalTitle": "EPIC-6: Friends & Text Chat — Requirements Document"
+    }
+  ]
+}

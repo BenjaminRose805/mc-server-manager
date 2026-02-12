@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/shared-minecraft-servers/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T00:38:28.344Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770856708331_020o3ftx4",
+      "approvalTitle": "EPIC-7: Shared Minecraft Servers — Design Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T00:39:17.392Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770856708331_020o3ftx4",
+      "approvalTitle": "EPIC-7: Shared Minecraft Servers — Design Document"
+    }
+  ]
+}

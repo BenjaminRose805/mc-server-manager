@@ -5,11 +5,13 @@ import {
   Terminal,
   Settings,
   FileText,
+  Package,
   ServerOff,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ServerWithStatus } from "@mc-server-manager/shared";
+import { isModCapable } from "@mc-server-manager/shared";
 import { api } from "@/api/client";
 import { useServerStore } from "@/stores/serverStore";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -18,6 +20,7 @@ import { ServerStats } from "@/components/ServerStats";
 import { Console } from "@/components/Console";
 import { PropertiesForm } from "@/components/PropertiesForm";
 import { LogViewer } from "@/components/LogViewer";
+import { ModList } from "@/components/ModList";
 import { DeleteServerDialog } from "@/components/DeleteServerDialog";
 import { cn } from "@/lib/utils";
 
@@ -25,20 +28,28 @@ import { cn } from "@/lib/utils";
 // Tab definitions
 // ---------------------------------------------------------------------------
 
-type TabId = "console" | "settings" | "logs";
+type TabId = "console" | "settings" | "logs" | "mods";
 
 interface TabDef {
   id: TabId;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  available: boolean; // false = "coming soon"
+  available: boolean;
 }
 
-const tabs: TabDef[] = [
-  { id: "console", label: "Console", icon: Terminal, available: true },
-  { id: "settings", label: "Settings", icon: Settings, available: true },
-  { id: "logs", label: "Logs", icon: FileText, available: true },
-];
+function getTabs(server: ServerWithStatus | null): TabDef[] {
+  return [
+    { id: "console", label: "Console", icon: Terminal, available: true },
+    { id: "settings", label: "Settings", icon: Settings, available: true },
+    {
+      id: "mods",
+      label: "Mods",
+      icon: Package,
+      available: server ? isModCapable(server.type) : false,
+    },
+    { id: "logs", label: "Logs", icon: FileText, available: true },
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Loading skeleton
@@ -278,7 +289,7 @@ export function ServerDetail() {
 
       {/* -- Tabs ---------------------------------------------------------- */}
       <div className="mt-4 flex shrink-0 border-b border-zinc-800">
-        {tabs.map((tab) => {
+        {getTabs(displayServer).map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
@@ -319,6 +330,10 @@ export function ServerDetail() {
 
         {activeTab === "settings" && (
           <PropertiesForm server={displayServer} className="h-full" />
+        )}
+
+        {activeTab === "mods" && (
+          <ModList server={displayServer} className="h-full" />
         )}
 
         {activeTab === "logs" && (

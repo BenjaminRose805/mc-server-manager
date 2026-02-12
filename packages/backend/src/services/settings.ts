@@ -1,19 +1,27 @@
-import type { AppSettings } from '@mc-server-manager/shared';
-import { getDb } from './database.js';
-import { config } from '../config.js';
+import type { AppSettings } from "@mc-server-manager/shared";
+import { getDb } from "./database.js";
+import { config } from "../config.js";
 
 // ---------------------------------------------------------------------------
 // Settings service — persists app-level configuration in SQLite
 // ---------------------------------------------------------------------------
 
-const SETTING_KEYS = ['javaPath', 'dataDir', 'defaultJvmArgs', 'maxConsoleLines'] as const;
+const SETTING_KEYS = [
+  "javaPath",
+  "dataDir",
+  "defaultJvmArgs",
+  "maxConsoleLines",
+  "curseforgeApiKey",
+  "showOverridePreview",
+] as const;
 
-/** Default values for all settings */
 const DEFAULTS: AppSettings = {
-  javaPath: 'java',
+  javaPath: "java",
   dataDir: config.dataDir,
-  defaultJvmArgs: '-Xmx2G -Xms1G',
+  defaultJvmArgs: "-Xmx2G -Xms1G",
   maxConsoleLines: 1000,
+  curseforgeApiKey: "",
+  showOverridePreview: false,
 };
 
 /**
@@ -21,7 +29,7 @@ const DEFAULTS: AppSettings = {
  */
 export function getAllSettings(): AppSettings {
   const db = getDb();
-  const rows = db.prepare('SELECT key, value FROM settings').all() as Array<{
+  const rows = db.prepare("SELECT key, value FROM settings").all() as Array<{
     key: string;
     value: string;
   }>;
@@ -31,13 +39,15 @@ export function getAllSettings(): AppSettings {
     stored[row.key] = row.value;
   }
 
-  const result: Record<string, string | number> = {};
+  const result: Record<string, string | number | boolean> = {};
   for (const key of SETTING_KEYS) {
     const defaultVal = DEFAULTS[key];
     if (key in stored) {
-      if (typeof defaultVal === 'number') {
+      if (typeof defaultVal === "number") {
         const parsed = parseInt(stored[key], 10);
         result[key] = isNaN(parsed) ? defaultVal : parsed;
+      } else if (typeof defaultVal === "boolean") {
+        result[key] = stored[key] === "true";
       } else {
         result[key] = stored[key];
       }
@@ -55,7 +65,7 @@ export function getAllSettings(): AppSettings {
 export function updateSettings(updates: Partial<AppSettings>): AppSettings {
   const db = getDb();
   const upsert = db.prepare(
-    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
   );
 
   const validKeys = new Set<string>(SETTING_KEYS);

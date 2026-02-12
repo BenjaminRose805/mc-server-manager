@@ -6,30 +6,44 @@ export class AppError extends Error {
   constructor(
     message: string,
     public statusCode: number = 500,
-    public code?: string
+    public code?: string,
   ) {
     super(message);
-    this.name = 'AppError';
+    this.name = "AppError";
   }
 }
 
 export class NotFoundError extends AppError {
   constructor(resource: string, id: string) {
-    super(`${resource} with id '${id}' not found`, 404, 'NOT_FOUND');
-    this.name = 'NotFoundError';
+    super(`${resource} with id '${id}' not found`, 404, "NOT_FOUND");
+    this.name = "NotFoundError";
   }
 }
 
 export class ValidationError extends AppError {
   constructor(message: string) {
-    super(message, 400, 'VALIDATION_ERROR');
-    this.name = 'ValidationError';
+    super(message, 400, "VALIDATION_ERROR");
+    this.name = "ValidationError";
   }
 }
 
 export class ConflictError extends AppError {
   constructor(message: string) {
-    super(message, 409, 'CONFLICT');
-    this.name = 'ConflictError';
+    super(message, 409, "CONFLICT");
+    this.name = "ConflictError";
+  }
+}
+
+export class UnauthorizedError extends AppError {
+  constructor(message: string = "Authentication required") {
+    super(message, 401, "UNAUTHORIZED");
+    this.name = "UnauthorizedError";
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message: string = "Insufficient permissions") {
+    super(message, 403, "FORBIDDEN");
+    this.name = "ForbiddenError";
   }
 }

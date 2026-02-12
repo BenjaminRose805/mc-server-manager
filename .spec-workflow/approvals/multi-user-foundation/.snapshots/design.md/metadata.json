@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/multi-user-foundation/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T00:07:58.827Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770854878817_1e2cvobcj",
+      "approvalTitle": "EPIC-5: Multi-User Foundation — Design Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T00:09:20.986Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770854878817_1e2cvobcj",
+      "approvalTitle": "EPIC-5: Multi-User Foundation — Design Document"
+    }
+  ]
+}

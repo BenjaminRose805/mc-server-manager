@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/voice-communication/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T00:37:28.637Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770856648614_a2dvwbeje",
+      "approvalTitle": "EPIC-8: Voice Communication — Requirements Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T00:38:03.392Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770856648614_a2dvwbeje",
+      "approvalTitle": "EPIC-8: Voice Communication — Requirements Document"
+    }
+  ]
+}

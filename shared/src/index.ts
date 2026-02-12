@@ -5,7 +5,7 @@
 
 // --- Server Types ---
 
-export type ServerType = "vanilla" | "paper" | "fabric" | "forge";
+export type ServerType = "vanilla" | "paper" | "fabric" | "forge" | "neoforge";
 
 export type ServerStatus =
   | "stopped"
@@ -123,13 +123,26 @@ export interface WsError extends WsMessage {
   code?: string;
 }
 
+export interface WsModpackProgress extends WsMessage {
+  type: "modpack:progress";
+  serverId: string;
+  jobId: string;
+  status: ModpackInstallStatus;
+  totalMods: number;
+  installedMods: number;
+  currentMod: string;
+  error?: string;
+}
+
 export type WsServerMessage =
   | WsConsoleLine
   | WsConsoleHistory
   | WsStatusChange
   | WsStats
   | WsCommandAck
-  | WsError;
+  | WsError
+  | WsModpackProgress
+  | WsModpackUpdateAvailable;
 
 // --- System ---
 
@@ -204,11 +217,17 @@ export interface ForgeDownloadRequest extends DownloadRequestBase {
   forgeVersion: string;
 }
 
+export interface NeoForgeDownloadRequest extends DownloadRequestBase {
+  serverType: "neoforge";
+  neoforgeVersion: string;
+}
+
 export type DownloadRequest =
   | VanillaDownloadRequest
   | PaperDownloadRequest
   | FabricDownloadRequest
-  | ForgeDownloadRequest;
+  | ForgeDownloadRequest
+  | NeoForgeDownloadRequest;
 
 // --- Version Info (discriminated union by type) ---
 
@@ -239,11 +258,20 @@ export interface ForgeVersionInfo {
   latest: string;
 }
 
+export interface NeoForgeVersionInfo {
+  type: "neoforge";
+  mcVersion: string;
+  neoforgeVersions: string[];
+  latest: string;
+  recommended?: string;
+}
+
 export type VersionInfo =
   | VanillaVersionInfo
   | PaperVersionInfo
   | FabricVersionInfo
-  | ForgeVersionInfo;
+  | ForgeVersionInfo
+  | NeoForgeVersionInfo;
 
 // --- Java / Minecraft Version Compatibility ---
 
@@ -426,6 +454,309 @@ export interface AppSettings {
   defaultJvmArgs: string;
   /** Max console lines kept in the ring buffer */
   maxConsoleLines: number;
+  /** CurseForge API key (optional — enables CurseForge mod search) */
+  curseforgeApiKey: string;
+  /** When true, modpack install shows file-by-file override preview */
+  showOverridePreview: boolean;
+}
+
+// --- Mod Management ---
+
+/** Target for mod installation (server or launcher instance) */
+export interface ModTarget {
+  type: "server" | "instance";
+  id: string;
+  modsDir: string;
+  mcVersion: string;
+  loader: ModLoader | null;
+  loaderVersion: string | null;
+}
+
+/** Which API a mod was sourced from */
+export type ModSource = "modrinth" | "curseforge" | "local";
+
+/** Mod loader identifier (subset of ServerType that supports mods) */
+export type ModLoader = "forge" | "fabric" | "neoforge";
+
+/** Which side(s) a mod runs on */
+export type ModSide = "client" | "server" | "both" | "unknown";
+
+/** Server types that support mod management */
+export const MOD_CAPABLE_TYPES: readonly ServerType[] = [
+  "forge",
+  "fabric",
+  "neoforge",
+] as const;
+
+/** Check if a server type supports mods */
+export function isModCapable(type: ServerType): type is ModLoader {
+  return (MOD_CAPABLE_TYPES as readonly string[]).includes(type);
+}
+
+/** A mod installed on a server or launcher instance (persisted in DB) */
+export interface InstalledMod {
+  id: string;
+  serverId: string | null;
+  instanceId: string | null;
+  name: string;
+  slug: string;
+  source: ModSource;
+  sourceId: string;
+  versionId: string;
+  fileName: string;
+  enabled: boolean;
+  side: ModSide;
+  modpackId: string | null;
+  mcVersion: string;
+  loaderType: ModLoader;
+  description: string;
+  iconUrl: string;
+  websiteUrl: string;
+  authors: string;
+  installedAt: string;
+  updatedAt: string;
+}
+
+/** Search result from Modrinth or CurseForge */
+export interface ModSearchResult {
+  source: ModSource;
+  sourceId: string;
+  slug: string;
+  name: string;
+  description: string;
+  author: string;
+  iconUrl: string;
+  downloads: number;
+  lastUpdated: string;
+  categories: string[];
+  mcVersions: string[];
+  loaders: ModLoader[];
+  /** Modrinth side field: "required" | "optional" | "unsupported" | "unknown" */
+  clientSide?: string;
+  /** Modrinth side field: "required" | "optional" | "unsupported" | "unknown" */
+  serverSide?: string;
+}
+
+/** A specific downloadable version of a mod */
+export interface ModVersion {
+  versionId: string;
+  source: ModSource;
+  sourceId: string;
+  name: string;
+  versionNumber: string;
+  mcVersions: string[];
+  loaders: ModLoader[];
+  fileName: string;
+  fileSize: number;
+  downloadUrl: string;
+  dependencies: ModDependency[];
+  releaseType: "release" | "beta" | "alpha";
+  datePublished: string;
+}
+
+/** A dependency of a mod version */
+export interface ModDependency {
+  projectId: string;
+  versionId?: string;
+  name?: string;
+  type: "required" | "optional" | "incompatible";
+}
+
+/** Compatibility warning for a mod */
+export interface ModCompatibilityWarning {
+  type: "mc_version" | "loader" | "client_only";
+  severity: "error" | "warning";
+  message: string;
+}
+
+/** Request to install a mod on a server */
+export interface InstallModRequest {
+  source: ModSource;
+  sourceId: string;
+  versionId: string;
+}
+
+/** Request to install a client mod loader on a launcher instance */
+export interface InstallClientLoaderRequest {
+  loader: ModLoader;
+  loaderVersion?: string;
+}
+
+/** Response from mod search endpoint */
+export interface ModSearchResponse {
+  results: ModSearchResult[];
+  totalHits: number;
+}
+
+/** Sort options supported by both Modrinth and CurseForge */
+export type ModSortOption = "relevance" | "downloads" | "updated" | "newest";
+
+/** Environment filter for mod search */
+export type ModEnvironment = "client" | "server" | "both";
+
+/** A merged mod category from Modrinth and/or CurseForge */
+export interface ModCategory {
+  /** Normalized key for deduplication (lowercase, hyphenated) */
+  slug: string;
+  /** Human-readable display name */
+  name: string;
+  /** Icon URL (from Modrinth if available) */
+  iconUrl?: string;
+  /** Modrinth facet value — present if this category exists on Modrinth */
+  modrinthId?: string;
+  /** CurseForge category ID (numeric as string) — present if exists on CF */
+  curseforgeId?: string;
+}
+
+/** Response from GET /api/mods/categories */
+export interface ModCategoryResponse {
+  categories: ModCategory[];
+}
+
+// --- Modpack Management ---
+
+export interface ModpackSearchResult {
+  source: ModSource;
+  sourceId: string;
+  slug: string;
+  name: string;
+  description: string;
+  author: string;
+  iconUrl: string;
+  downloads: number;
+  lastUpdated: string;
+  categories: string[];
+  mcVersions: string[];
+  loaders: ModLoader[];
+}
+
+export interface ModpackSearchResponse {
+  results: ModpackSearchResult[];
+  totalHits: number;
+}
+
+export interface ModpackVersion {
+  versionId: string;
+  source: ModSource;
+  sourceId: string;
+  name: string;
+  versionNumber: string;
+  mcVersions: string[];
+  loaders: ModLoader[];
+  fileUrl: string;
+  fileSize: number;
+  releaseType: "release" | "beta" | "alpha";
+  datePublished: string;
+  serverPackFileId?: string;
+}
+
+export interface ModpackEntry {
+  path: string;
+  downloadUrl: string;
+  fileSize: number;
+  hashes?: { sha1?: string; sha512?: string };
+  side: ModSide;
+  name?: string;
+  slug?: string;
+  curseforgeProjectId?: number;
+  curseforgeFileId?: number;
+}
+
+export interface ParsedModpack {
+  name: string;
+  versionId: string;
+  mcVersion: string;
+  loader: ModLoader;
+  loaderVersion: string;
+  entries: ModpackEntry[];
+  overrideFileCount: number;
+  hasServerOverrides: boolean;
+  overrideFiles?: string[];
+}
+
+export interface InstallModpackRequest {
+  source: ModSource;
+  sourceId: string;
+  versionId: string;
+  selectedEntries: number[];
+  applyOverrides: boolean;
+}
+
+export type ModpackInstallStatus =
+  | "parsing"
+  | "downloading"
+  | "applying_overrides"
+  | "completed"
+  | "failed";
+
+export interface ModpackInstallProgress {
+  jobId: string;
+  status: ModpackInstallStatus;
+  totalMods: number;
+  installedMods: number;
+  currentMod: string;
+  error?: string;
+}
+
+export interface InstalledModpack {
+  id: string;
+  serverId: string;
+  source: ModSource;
+  sourceId: string;
+  versionId: string;
+  versionNumber: string;
+  name: string;
+  mcVersion: string;
+  loaderType: ModLoader;
+  iconUrl: string;
+  websiteUrl: string;
+  authors: string;
+  modCount: number;
+  installedAt: string;
+  updatedAt: string;
+}
+
+// --- Modpack Update Detection ---
+
+export interface ModpackUpdateInfo {
+  modpackId: string;
+  currentVersionId: string;
+  currentVersionNumber: string;
+  latestVersionId: string;
+  latestVersionNumber: string;
+  latestMcVersions: string[];
+  latestLoaders: ModLoader[];
+  updateAvailable: boolean;
+}
+
+export interface WsModpackUpdateAvailable extends WsMessage {
+  type: "modpack:update";
+  serverId: string;
+  modpackId: string;
+  latestVersionId: string;
+  latestVersionNumber: string;
+}
+
+// --- Modpack Export ---
+
+export interface ModpackExportData {
+  name: string;
+  mcVersion: string;
+  loaderType: ModLoader;
+  source: ModSource;
+  sourceId: string;
+  versionId: string;
+  versionNumber: string;
+  mods: Array<{
+    name: string;
+    source: ModSource;
+    sourceId: string;
+    versionId: string;
+    fileName: string;
+    side: ModSide;
+    enabled: boolean;
+  }>;
+  exportedAt: string;
 }
 
 // --- Mojang Version Manifest ---
@@ -446,4 +777,232 @@ export interface MojangVersionEntry {
   releaseTime: string;
   sha1: string;
   complianceLevel: number;
+}
+
+// --- Launcher Types ---
+
+export type LoaderType = "fabric" | "forge" | "neoforge" | "quilt";
+
+export type VersionType = "release" | "snapshot" | "old_beta" | "old_alpha";
+
+export interface LauncherInstance {
+  id: string;
+  name: string;
+  mcVersion: string;
+  versionType: VersionType;
+  loader: LoaderType | null;
+  loaderVersion: string | null;
+  javaVersion: number;
+  javaPath: string | null;
+  ramMin: number;
+  ramMax: number;
+  resolutionWidth: number | null;
+  resolutionHeight: number | null;
+  jvmArgs: string[];
+  gameArgs: string[];
+  icon: string | null;
+  lastPlayed: string | null;
+  totalPlaytime: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateInstanceRequest {
+  name: string;
+  mcVersion: string;
+  versionType?: VersionType;
+  loader?: LoaderType;
+  loaderVersion?: string;
+  ramMin?: number;
+  ramMax?: number;
+}
+
+export interface UpdateInstanceRequest {
+  name?: string;
+  ramMin?: number;
+  ramMax?: number;
+  resolutionWidth?: number | null;
+  resolutionHeight?: number | null;
+  jvmArgs?: string[];
+  gameArgs?: string[];
+  icon?: string | null;
+  javaPath?: string | null;
+}
+
+export interface LauncherAccount {
+  id: string;
+  uuid: string;
+  username: string;
+  accountType: "msa" | "legacy";
+  lastUsed: string | null;
+  createdAt: string;
+}
+
+export interface MinecraftVersion {
+  id: string;
+  type: VersionType;
+  url: string;
+  time: string;
+  releaseTime: string;
+  sha1: string;
+}
+
+export interface VersionManifest {
+  latest: {
+    release: string;
+    snapshot: string;
+  };
+  versions: MinecraftVersion[];
+}
+
+export interface JavaInstallation {
+  version: number;
+  path: string;
+  vendor: string;
+  fullVersion: string;
+}
+
+export interface MSAuthDeviceCode {
+  userCode: string;
+  deviceCode: string;
+  verificationUri: string;
+  expiresIn: number;
+  interval: number;
+}
+
+export interface MSAuthStatus {
+  status: "pending" | "complete" | "expired" | "error";
+  account?: LauncherAccount;
+  error?: string;
+}
+
+export interface LaunchGameRequest {
+  instanceId: string;
+  accountId: string;
+}
+
+export interface GameProcess {
+  instanceId: string;
+  pid: number;
+  startedAt: string;
+}
+
+export interface DownloadProgressInfo {
+  phase: "version" | "libraries" | "assets";
+  current: number;
+  total: number;
+  currentFile?: string;
+}
+
+export interface PrepareResponse {
+  classpath: string[];
+  mainClass: string;
+  assetIndex: string;
+  assetsDir: string;
+  versionId: string;
+  gameJarPath: string;
+  nativesDir: string;
+}
+
+// ============================================================
+// Multi-User Auth Types (Epic 5)
+// ============================================================
+
+export type UserRole = "owner" | "admin" | "member";
+
+export interface User {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt: string | null;
+  minecraftUsername: string | null;
+  minecraftUuid: string | null;
+}
+
+export interface Session {
+  id: string;
+  userId: string;
+  deviceInfo: string | null;
+  ipAddress: string | null;
+  expiresAt: string;
+  createdAt: string;
+  lastUsedAt: string;
+}
+
+export interface Invitation {
+  id: string;
+  code: string;
+  createdBy: string;
+  maxUses: number;
+  uses: number;
+  role: UserRole;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+export interface ServerPermission {
+  id: string;
+  serverId: string;
+  userId: string;
+  canView: boolean;
+  canStart: boolean;
+  canConsole: boolean;
+  canEdit: boolean;
+  canJoin: boolean;
+  createdAt: string;
+}
+
+export interface JWTPayload {
+  sub: string; // User ID
+  username: string;
+  role: UserRole;
+  iat: number;
+  exp: number;
+}
+
+export interface AuthenticatedRequest {
+  user: {
+    id: string;
+    username: string;
+    role: UserRole;
+  };
+}
+
+export interface SetupRequest {
+  username: string;
+  password: string;
+  displayName: string;
+}
+
+export interface RegisterRequest {
+  inviteCode: string;
+  username: string;
+  password: string;
+  displayName: string;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface RefreshResponse {
+  accessToken: string;
+  refreshToken?: string;
+}
+
+export interface AuthStatusResponse {
+  setupRequired: boolean;
+  multiUser: boolean;
 }

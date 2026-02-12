@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/friends-text-chat/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T00:26:43.275Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770856003265_zamd5bims",
+      "approvalTitle": "EPIC-6: Friends & Text Chat — Tasks Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T00:28:53.080Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770856003265_zamd5bims",
+      "approvalTitle": "EPIC-6: Friends & Text Chat — Tasks Document"
+    }
+  ]
+}

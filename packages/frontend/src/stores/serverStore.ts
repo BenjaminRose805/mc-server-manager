@@ -4,6 +4,8 @@ import type {
   ServerWithStatus,
   ServerStatus,
   WsServerMessage,
+  ModpackInstallProgress,
+  ModpackUpdateInfo,
 } from "@mc-server-manager/shared";
 import { api } from "@/api/client";
 import { wsClient } from "@/api/ws";
@@ -44,6 +46,19 @@ interface ServerStore {
   appendConsole: (serverId: string, line: string, timestamp: string) => void;
   setConsoleHistory: (serverId: string, lines: ConsoleLine[]) => void;
   clearConsole: (serverId: string) => void;
+
+  // --- Modpack install progress ---
+  modpackProgress: Record<string, ModpackInstallProgress>;
+  setModpackProgress: (
+    serverId: string,
+    progress: ModpackInstallProgress,
+  ) => void;
+  clearModpackProgress: (jobId: string) => void;
+
+  // --- Modpack update detection ---
+  modpackUpdates: Record<string, ModpackUpdateInfo>;
+  setModpackUpdate: (modpackId: string, info: ModpackUpdateInfo) => void;
+  clearModpackUpdate: (modpackId: string) => void;
 
   // --- WebSocket connected state ---
   wsConnected: boolean;
@@ -118,6 +133,39 @@ export const useServerStore = create<ServerStore>((set, get) => ({
     });
   },
 
+  // --- Modpack install progress ---
+  modpackProgress: {},
+
+  setModpackProgress(serverId, progress) {
+    set({
+      modpackProgress: {
+        ...get().modpackProgress,
+        [progress.jobId]: progress,
+      },
+    });
+  },
+
+  clearModpackProgress(jobId) {
+    const next = { ...get().modpackProgress };
+    delete next[jobId];
+    set({ modpackProgress: next });
+  },
+
+  // --- Modpack update detection ---
+  modpackUpdates: {},
+
+  setModpackUpdate(modpackId, info) {
+    set({
+      modpackUpdates: { ...get().modpackUpdates, [modpackId]: info },
+    });
+  },
+
+  clearModpackUpdate(modpackId) {
+    const next = { ...get().modpackUpdates };
+    delete next[modpackId];
+    set({ modpackUpdates: next });
+  },
+
   // --- WebSocket ---
   wsConnected: false,
 }));
@@ -186,6 +234,39 @@ function handleWsMessage(msg: WsServerMessage): void {
         players: msg.players,
         uptime: msg.uptime,
       });
+      break;
+
+    case "modpack:progress":
+      store.setModpackProgress(msg.serverId, {
+        jobId: msg.jobId,
+        status: msg.status,
+        totalMods: msg.totalMods,
+        installedMods: msg.installedMods,
+        currentMod: msg.currentMod,
+        error: msg.error,
+      });
+      if (msg.status === "completed") {
+        const name = getServerName(msg.serverId);
+        toast.success(`${name}: Modpack installed`);
+      } else if (msg.status === "failed") {
+        toast.error(`Modpack install failed: ${msg.error ?? "Unknown error"}`);
+      }
+      break;
+
+    case "modpack:update":
+      store.setModpackUpdate(msg.modpackId, {
+        modpackId: msg.modpackId,
+        currentVersionId: "",
+        currentVersionNumber: "",
+        latestVersionId: msg.latestVersionId,
+        latestVersionNumber: msg.latestVersionNumber,
+        latestMcVersions: [],
+        latestLoaders: [],
+        updateAvailable: true,
+      });
+      toast.info(
+        `${getServerName(msg.serverId)}: Modpack update available (v${msg.latestVersionNumber})`,
+      );
       break;
 
     case "error":

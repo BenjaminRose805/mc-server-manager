@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/mod-sync/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T00:38:30.351Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770856710340_h5zixq7qu",
+      "approvalTitle": "EPIC-9: Mod Sync — Design Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T00:39:21.855Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770856710340_h5zixq7qu",
+      "approvalTitle": "EPIC-9: Mod Sync — Design Document"
+    }
+  ]
+}

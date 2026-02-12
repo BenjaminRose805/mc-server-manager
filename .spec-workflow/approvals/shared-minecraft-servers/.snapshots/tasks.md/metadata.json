@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/shared-minecraft-servers/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-12T00:39:45.248Z",
+      "trigger": "initial",
+      "approvalId": "approval_1770856785236_ddowux7js",
+      "approvalTitle": "EPIC-7: Shared Minecraft Servers — Tasks Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-12T00:39:50.562Z",
+      "trigger": "approved",
+      "approvalId": "approval_1770856785236_ddowux7js",
+      "approvalTitle": "EPIC-7: Shared Minecraft Servers — Tasks Document"
+    }
+  ]
+}
