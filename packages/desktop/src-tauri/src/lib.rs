@@ -81,7 +81,10 @@ pub fn run() {
         ])
         .setup(|app| {
             if std::env::var("TAURI_DEV_BACKEND_EXTERNAL").is_err() {
-                spawn_backend(app.handle())?;
+                if let Err(e) = spawn_backend(app.handle()) {
+                    log::error!("Failed to spawn backend sidecar: {e}");
+                    eprintln!("Failed to spawn backend sidecar: {e}");
+                }
             }
 
             let show_item =
