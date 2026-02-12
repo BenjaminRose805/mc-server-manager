@@ -15,7 +15,10 @@ import { pipeline } from "stream/promises";
 import { get } from "https";
 import type { IncomingMessage } from "http";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const _scriptDir =
+  typeof import.meta?.url === "string"
+    ? dirname(fileURLToPath(import.meta.url))
+    : dirname(process.argv[1]);
 
 const NODE_VERSION = "22.14.0";
 
@@ -40,9 +43,9 @@ if (!targetInfo) {
   );
 }
 
-const rootDir = join(__dirname, "..", "..", "..");
+const rootDir = join(_scriptDir, "..", "..", "..");
 const backendDir = join(rootDir, "packages", "backend");
-const tauriDir = join(__dirname, "..", "src-tauri");
+const tauriDir = join(_scriptDir, "..", "src-tauri");
 const resourcesDir = join(tauriDir, "resources");
 const binariesDir = join(tauriDir, "binaries");
 const isWindows = targetInfo.platform === "win32";
@@ -195,34 +198,41 @@ async function downloadNode(): Promise<void> {
   console.log(`  Node.js binary saved to ${nodeOutputPath}`);
 }
 
-await downloadNode();
+async function main(): Promise<void> {
+  await downloadNode();
 
-console.log("Step 5: Building Rust launcher...");
-execSync("cargo build --release --bin mc-backend", {
-  cwd: tauriDir,
-  stdio: "inherit",
-});
+  console.log("Step 5: Building Rust launcher...");
+  execSync("cargo build --release --bin mc-backend", {
+    cwd: tauriDir,
+    stdio: "inherit",
+  });
 
-mkdirSync(binariesDir, { recursive: true });
-const launcherSrc = join(tauriDir, "target", "release", `mc-backend${ext}`);
-const launcherDest = join(binariesDir, `mc-backend-${rustTarget}${ext}`);
-cpSync(launcherSrc, launcherDest);
+  mkdirSync(binariesDir, { recursive: true });
+  const launcherSrc = join(tauriDir, "target", "release", `mc-backend${ext}`);
+  const launcherDest = join(binariesDir, `mc-backend-${rustTarget}${ext}`);
+  cpSync(launcherSrc, launcherDest);
 
-console.log("Step 6: Cleaning up old pkg artifacts...");
-if (existsSync(binariesDir)) {
-  for (const f of readdirSync(binariesDir)) {
-    if (f.startsWith("mc-server-backend-") || f === "better_sqlite3.node") {
-      console.log(`  Removing old artifact: ${f}`);
-      unlinkSync(join(binariesDir, f));
+  console.log("Step 6: Cleaning up old pkg artifacts...");
+  if (existsSync(binariesDir)) {
+    for (const f of readdirSync(binariesDir)) {
+      if (f.startsWith("mc-server-backend-") || f === "better_sqlite3.node") {
+        console.log(`  Removing old artifact: ${f}`);
+        unlinkSync(join(binariesDir, f));
+      }
     }
   }
+
+  const bundleDir = join(backendDir, "bundle");
+  if (existsSync(bundleDir)) {
+    rmSync(bundleDir, { recursive: true, force: true });
+  }
+
+  console.log("Backend packaging complete!");
+  console.log(`  Launcher: ${launcherDest}`);
+  console.log(`  Resources: ${resourcesDir}`);
 }
 
-const bundleDir = join(backendDir, "bundle");
-if (existsSync(bundleDir)) {
-  rmSync(bundleDir, { recursive: true, force: true });
-}
-
-console.log("Backend packaging complete!");
-console.log(`  Launcher: ${launcherDest}`);
-console.log(`  Resources: ${resourcesDir}`);
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
