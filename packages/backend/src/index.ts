@@ -120,17 +120,20 @@ export async function shutdownServer(
   });
 }
 
-// Standalone mode: side effects run only when executed directly (node dist/index.js).
-// When imported by Electron, the caller controls startup via the exported functions.
+const isPkg = "pkg" in process;
 const isStandaloneEntry =
-  !process.env.ELECTRON_RUN_AS_NODE &&
-  !process.versions.electron &&
-  process.argv[1] !== undefined &&
-  (process.argv[1].endsWith("/index.js") ||
-    process.argv[1].endsWith("\\index.js") ||
-    process.argv[1].endsWith("/index.ts"));
+  isPkg ||
+  (!process.env.ELECTRON_RUN_AS_NODE &&
+    !process.versions.electron &&
+    process.argv[1] !== undefined &&
+    (process.argv[1].endsWith("/index.js") ||
+      process.argv[1].endsWith("\\index.js") ||
+      process.argv[1].endsWith("/index.ts") ||
+      process.argv[1].endsWith("/index.cjs") ||
+      process.argv[1].endsWith("/server.cjs") ||
+      process.argv[1].endsWith("\\server.cjs")));
 
-if (isStandaloneEntry) {
+async function main() {
   initDatabase();
 
   const { httpServer, wss } = await startServer();
@@ -181,4 +184,8 @@ if (isStandaloneEntry) {
     forceExit();
     shutdown();
   });
+}
+
+if (isStandaloneEntry) {
+  main();
 }

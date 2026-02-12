@@ -21,5 +21,9 @@ tar = "0.4"
 [target.'cfg(windows)'.dependencies]
 zip = "2"
 
+[[bin]]
+name = "mc-backend"
+path = "src/bin/mc-backend.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

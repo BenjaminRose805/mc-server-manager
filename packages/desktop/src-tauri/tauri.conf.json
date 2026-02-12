@@ -35,7 +35,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/mc-server-backend"],
+    "externalBin": ["binaries/mc-backend"],
+    "resources": ["resources/**/*"],
     "createUpdaterArtifacts": false
   },
   "plugins": {
