@@ -202,7 +202,7 @@ async function main(): Promise<void> {
   await downloadNode();
 
   console.log("Step 5: Building Rust launcher...");
-  execSync("cargo build --release --bin mc-backend", {
+  execSync("cargo build --release -p mc-backend", {
     cwd: tauriDir,
     stdio: "inherit",
   });
