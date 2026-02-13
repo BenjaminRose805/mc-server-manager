@@ -19,7 +19,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write # Required for creating GitHub Releases
+  contents: write
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -50,10 +50,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Fix app-builder-bin permissions
+      - name: Prepare app-builder binary
         run: |
           chmod +x node_modules/app-builder-bin/linux/x64/app-builder
-          ls -la node_modules/app-builder-bin/linux/x64/
+          cp node_modules/app-builder-bin/linux/x64/app-builder /usr/local/bin/app-builder
+          app-builder --version
 
       - name: Build all packages (shared -> backend -> frontend -> electron)
         run: |
@@ -62,6 +63,8 @@ jobs:
 
       - name: Package Electron app
         run: npx electron-builder --linux --publish never --project=packages/electron
+        env:
+          USE_SYSTEM_APP_BUILDER: 'true'
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -103,10 +106,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Fix app-builder-bin permissions
+      - name: Prepare app-builder binary
         run: |
           chmod +x node_modules/app-builder-bin/mac/app-builder_*
-          ls -la node_modules/app-builder-bin/mac/
+          sudo cp node_modules/app-builder-bin/mac/app-builder_arm64 /usr/local/bin/app-builder
+          app-builder --version
 
       - name: Build all packages (shared -> backend -> frontend -> electron)
         run: |
@@ -116,10 +120,9 @@ jobs:
       - name: Package Electron app
         run: npx electron-builder --mac --publish never --project=packages/electron
         env:
-          # Code signing (optional -- skipped if secrets not set)
+          USE_SYSTEM_APP_BUILDER: 'true'
           CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
-          # Notarization (optional -- skipped if secrets not set)
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -163,6 +166,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare app-builder binary
+        shell: bash
+        run: |
+          APP_BUILDER="node_modules/app-builder-bin/win/x64/app-builder.exe"
+          echo "Binary exists: $(test -f "$APP_BUILDER" && echo yes || echo no)"
+          ls -la "$APP_BUILDER" || true
+          echo "CUSTOM_APP_BUILDER_PATH=$GITHUB_WORKSPACE/$APP_BUILDER" >> $GITHUB_ENV
+
       - name: Build all packages (shared -> backend -> frontend -> electron)
         run: |
           npm run build
@@ -171,7 +182,6 @@ jobs:
       - name: Package Electron app
         run: npx electron-builder --win --publish never --project=packages/electron
         env:
-          # Code signing (optional -- skipped if secrets not set)
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
