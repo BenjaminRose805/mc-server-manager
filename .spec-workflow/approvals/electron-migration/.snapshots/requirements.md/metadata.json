@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/electron-migration/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-13T17:19:58.920Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771003198896_5yj2a9c94",
+      "approvalTitle": "Requirements: Electron Migration (Remove Rust/Tauri)"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-13T17:37:23.649Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771003198896_5yj2a9c94",
+      "approvalTitle": "Requirements: Electron Migration (Remove Rust/Tauri)"
+    }
+  ]
+}

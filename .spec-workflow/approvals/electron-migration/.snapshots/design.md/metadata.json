@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/electron-migration/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-13T17:40:00.794Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771004400779_wc33rqv88",
+      "approvalTitle": "Design: Electron Migration (Remove Rust/Tauri)"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-13T17:43:24.781Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771004400779_wc33rqv88",
+      "approvalTitle": "Design: Electron Migration (Remove Rust/Tauri)"
+    }
+  ]
+}

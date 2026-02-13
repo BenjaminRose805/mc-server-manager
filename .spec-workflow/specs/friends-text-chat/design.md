@@ -19,7 +19,7 @@ No steering docs exist. This design follows existing project conventions (Expres
 - **Error classes (`packages/backend/src/utils/errors.ts`)**: `NotFoundError`, `ConflictError`, `ForbiddenError` used in friend/channel/message services.
 - **Zod validation**: All new route handlers use Zod schemas following existing patterns.
 - **Pino logger**: Existing logger for friend/chat event logging.
-- **Tauri notification plugin**: Available from Epic 1 for desktop notifications.
+- **Electron Notification API**: Available from the Electron package for desktop notifications.
 
 ### Integration Points
 - **`users` table**: Foreign key target for friendships, channel_members, messages. Uses `minecraft_username` and `minecraft_uuid` columns from Epic 5's users table (migration 009) for in-game presence detection. No additional column changes needed.

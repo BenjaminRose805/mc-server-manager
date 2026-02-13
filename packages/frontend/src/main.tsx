@@ -2,12 +2,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { App } from "./App";
-import { isTauri } from "./utils/tauri";
+import { isDesktop } from "./utils/desktop";
 import { waitForBackend } from "./utils/wait-for-backend";
 import "./index.css";
 
 async function init() {
-  if (isTauri()) {
+  if (isDesktop()) {
     await waitForBackend();
   }
 

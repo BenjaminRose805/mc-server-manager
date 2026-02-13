@@ -102,7 +102,7 @@ export async function startServer(
   const portFile = path.join(config.dataDir, "backend.port");
   fs.writeFileSync(portFile, String(actualPort), "utf-8");
 
-  // Machine-readable line for sidecar/Tauri to parse
+  // Machine-readable line for Electron main process to parse
   console.log(`__BACKEND_PORT__=${actualPort}`);
 
   const wss = setupWebSocketServer(httpServer);

@@ -1,7 +1,7 @@
 import type { CorsOptions } from "cors";
 
 function isAllowedOrigin(origin: string): boolean {
-  const allowedOrigins = ["tauri://localhost", "https://tauri.localhost"];
+  const allowedOrigins: string[] = [];
 
   if (process.env.CUSTOM_DOMAIN) {
     allowedOrigins.push(process.env.CUSTOM_DOMAIN);

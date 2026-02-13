@@ -1,0 +1,12 @@
+{
+  "id": "approval_1771004797602_t5fnx07z3",
+  "title": "Tasks: Electron Migration (Remove Rust/Tauri)",
+  "filePath": ".spec-workflow/specs/electron-migration/tasks.md",
+  "type": "document",
+  "status": "approved",
+  "createdAt": "2026-02-13T17:46:37.602Z",
+  "category": "spec",
+  "categoryName": "electron-migration",
+  "response": "Approved via dashboard",
+  "respondedAt": "2026-02-13T17:48:21.786Z"
+}

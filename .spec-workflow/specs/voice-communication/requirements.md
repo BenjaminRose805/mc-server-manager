@@ -6,7 +6,7 @@ Add Discord-like voice channels to MC Server Manager using LiveKit, an open-sour
 
 This is audio-only for v1. Video calling and screen sharing are explicitly deferred to future versions. Voice chat is the core use case for gaming communities.
 
-Dependencies: Epic 5 (Multi-User Foundation) for user accounts and authentication. LiveKit server binary bundled as a Tauri sidecar.
+Dependencies: Epic 5 (Multi-User Foundation) for user accounts and authentication. LiveKit server binary managed as a child process by the Electron main process.
 
 Prerequisite for: Epic 9 (Mod Sync -- voice channels enhance the shared server experience).
 
@@ -65,8 +65,8 @@ Prerequisite for: Epic 9 (Mod Sync -- voice channels enhance the shared server e
 
 1. WHEN the user holds the push-to-talk key (default: Ctrl+Space) THEN the system SHALL enable the microphone and transmit audio.
 2. WHEN the user releases the push-to-talk key THEN the system SHALL disable the microphone (re-mute if the user was muted before).
-3. WHEN the push-to-talk key is pressed THEN it SHALL work as a global shortcut even when the application window is not focused, via Tauri global shortcut plugin.
-4. WHEN push-to-talk events are received from Tauri THEN the system SHALL distinguish between KeyDown (unmute) and KeyUp (re-mute) events.
+3. WHEN the push-to-talk key is pressed THEN it SHALL work as a global shortcut even when the application window is not focused, via Electron globalShortcut API.
+4. WHEN push-to-talk events are received from Electron IPC THEN the system SHALL distinguish between KeyDown (unmute) and KeyUp (re-mute) events.
 
 ---
 
@@ -103,10 +103,10 @@ Prerequisite for: Epic 9 (Mod Sync -- voice channels enhance the shared server e
 
 #### Acceptance Criteria
 
-1. WHEN the Tauri application starts THEN it SHALL spawn the LiveKit server binary as a sidecar process with the generated configuration file.
+1. WHEN the Electron application starts THEN it SHALL spawn the LiveKit server binary as a child process with the generated configuration file.
 2. WHEN the backend starts THEN it SHALL generate a LiveKit configuration YAML file containing port settings and API credentials.
 3. WHEN the application starts for the first time THEN the backend SHALL auto-generate LiveKit API key and secret credentials and store them in the settings table.
-4. WHEN the Tauri application is quit THEN it SHALL kill the LiveKit sidecar process before killing the backend sidecar.
+4. WHEN the Electron application is quit THEN it SHALL kill the LiveKit child process before killing the backend process.
 5. WHEN the LiveKit sidecar process terminates unexpectedly THEN the system SHALL log the termination with exit code and signal information.
 6. WHEN the LiveKit binary is not found at the expected sidecar path THEN the system SHALL log an error (voice features will be unavailable).
 
@@ -162,18 +162,18 @@ Prerequisite for: Epic 9 (Mod Sync -- voice channels enhance the shared server e
 
 ### Reliability
 - LiveKit sidecar process SHALL be gracefully shut down when the application exits.
-- The backend SHALL write the LiveKit configuration file before the Tauri sidecar attempts to start LiveKit (polling with timeout).
+- The backend SHALL write the LiveKit configuration file before the Electron main process attempts to start LiveKit (polling with timeout).
 - If the LiveKit server is unreachable, the frontend SHALL display a clear error message and allow the user to retry.
 - Disconnection from a voice channel SHALL cleanly detach all audio elements and reset the voice store state.
 
 ### Deployment
-- LiveKit server SHALL run as a single Go binary sidecar managed by Tauri -- no Docker required.
+- LiveKit server SHALL run as a single Go binary child process managed by the Electron main process -- no Docker required.
 - The LiveKit binary SHALL be downloaded per-platform during the build process via a dedicated download script.
-- The LiveKit binary SHALL be registered in Tauri's externalBin configuration alongside the backend sidecar.
+- The LiveKit binary SHALL be bundled with the Electron app via electron-builder extraResources configuration.
 - For v1, the system SHALL target local network use. Remote access (TURN server, TLS) is a future enhancement.
 
 ### Compatibility
-- WebRTC audio SHALL work on macOS (WKWebView, macOS 11+), Windows (WebView2/Chromium), and Linux (WebKitGTK 2.38+).
+- WebRTC audio SHALL work on macOS, Windows, and Linux via Electron's Chromium-based renderer.
 - The system SHALL detect WebRTC support at runtime via navigator.mediaDevices.getUserMedia and show an error if unavailable.
 - Minimum Linux distribution versions: Ubuntu 22.04+, Fedora 36+, Debian 12+.
 

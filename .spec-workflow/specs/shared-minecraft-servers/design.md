@@ -49,7 +49,7 @@ Member clicks "Join" in server browser
   --> Backend verifies user has "join" permission via middleware
   --> Backend returns { address, port, version, requiresMods }
   --> Frontend receives connection info:
-      - If Tauri + Epic 3: IPC call to launch Minecraft client
+      - If Electron + Client Launcher: IPC call to launch Minecraft client
       - Otherwise: copy address:port to clipboard, show toast
   --> Backend: WhitelistSyncService ensures user is on whitelist
 ```

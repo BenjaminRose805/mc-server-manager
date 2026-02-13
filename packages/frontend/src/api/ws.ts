@@ -2,7 +2,7 @@ import type {
   WsClientMessage,
   WsServerMessage,
 } from "@mc-server-manager/shared";
-import { isTauri, getBackendBaseUrlSync } from "../utils/tauri";
+import { isDesktop, getBackendBaseUrlSync } from "../utils/desktop";
 
 type MessageHandler = (msg: WsServerMessage) => void;
 type ConnectionHandler = () => void;
@@ -24,7 +24,7 @@ class WsClient {
 
   private getUrl(): string {
     if (!this.url) {
-      if (isTauri()) {
+      if (isDesktop()) {
         const base = getBackendBaseUrlSync().replace(/^http/, "ws");
         this.url = `${base || "ws://localhost:3001"}/ws`;
       } else {

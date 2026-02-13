@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/electron-desktop-builds/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-13T19:48:16.954Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771012096943_lkufkb0vf",
+      "approvalTitle": "Design: Electron Desktop Builds CI/CD"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-13T19:54:30.995Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771012096943_lkufkb0vf",
+      "approvalTitle": "Design: Electron Desktop Builds CI/CD"
+    }
+  ]
+}

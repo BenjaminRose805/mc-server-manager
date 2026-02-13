@@ -1,64 +1,37 @@
-# User Templates
+# User Templates -- MC Server Manager
 
-This directory allows you to create custom templates that override the default Spec Workflow templates.
+Custom spec-workflow templates tailored for this project's architecture and conventions.
 
-## How to Use Custom Templates
+## What's Customized
 
-1. **Create your custom template file** in this directory with the exact same name as the default template you want to override:
-   - `requirements-template.md` - Override requirements document template
-   - `design-template.md` - Override design document template
-   - `tasks-template.md` - Override tasks document template
-   - `product-template.md` - Override product steering template
-   - `tech-template.md` - Override tech steering template
-   - `structure-template.md` - Override structure steering template
+These templates override the generic defaults in `../templates/` with MC Server Manager-specific content:
 
-2. **Template Loading Priority**:
-   - The system first checks this `user-templates/` directory
-   - If a matching template is found here, it will be used
-   - Otherwise, the default template from `templates/` will be used
+### Spec Templates (Requirements -> Design -> Tasks)
 
-## Example Custom Template
+| Template | Key Customizations |
+|----------|-------------------|
+| `requirements-template.md` | MC Server Manager user roles (player/host/admin), standing non-functional requirements, dependency tracking between specs, migration/compatibility section |
+| `design-template.md` | Project architecture reference (Express+ws/React+Zustand/Electron/shared), exact TypeScript interface format, API endpoint tables, WS event tables, implementation order as first-class section, verification strategy (manual -- no test framework) |
+| `tasks-template.md` | **Highest impact.** Full architecture reference in comments, correct build order (shared types -> migrations -> models -> services -> routes -> mount -> WS -> frontend API -> stores -> WS wiring -> components -> pages -> verify), exhaustive `_Prompt` field quality checklist, oh-my-opencode delegation protocol baked in |
 
-To create a custom requirements template:
+### Steering Templates (Product / Tech / Structure)
 
-1. Create a file named `requirements-template.md` in this directory
-2. Add your custom structure, for example:
+| Template | Key Customizations |
+|----------|-------------------|
+| `product-template.md` | Pre-seeded with MC Server Manager product context, user personas, implemented vs planned features, product principles |
+| `tech-template.md` | Pre-seeded with actual tech stack (versions, rationale), architecture patterns, auth flow, decision log |
+| `structure-template.md` | Pre-seeded with actual directory tree, naming conventions, import patterns, code structure examples (route/model/store/page patterns), module boundaries, code size guidelines |
 
-```markdown
-# Requirements Document
+## How It Works
 
-## Executive Summary
-[Your custom section]
+The spec-workflow system checks `user-templates/` first. If a matching filename is found, it's used instead of the default from `templates/`. See the [spec-workflow guide](../templates/) for the full workflow.
 
-## Business Requirements
-[Your custom structure]
+## When to Update These Templates
 
-## Technical Requirements
-[Your custom fields]
+Update these templates when:
+- A new package is added to the monorepo
+- A major dependency is changed (e.g., swapping Zustand for something else)
+- New architectural patterns are established (e.g., adding a test framework)
+- A completed spec changes how features are structured
 
-## Custom Sections
-[Add any sections specific to your workflow]
-```
-
-## Template Variables
-
-Templates can include placeholders that will be replaced when documents are created:
-- `{{projectName}}` - The name of your project
-- `{{featureName}}` - The name of the feature being specified
-- `{{date}}` - The current date
-- `{{author}}` - The document author
-
-## Best Practices
-
-1. **Start from defaults**: Copy a default template from `../templates/` as a starting point
-2. **Keep structure consistent**: Maintain similar section headers for tool compatibility
-3. **Document changes**: Add comments explaining why sections were added/modified
-4. **Version control**: Track your custom templates in version control
-5. **Test thoroughly**: Ensure custom templates work with the spec workflow tools
-
-## Notes
-
-- Custom templates are project-specific and not included in the package distribution
-- The `templates/` directory contains the default templates which are updated with each version
-- Your custom templates in this directory are preserved during updates
-- If a custom template has errors, the system will fall back to the default template
+The steering templates (`product-template.md`, `tech-template.md`, `structure-template.md`) are especially sensitive to project evolution -- they contain pre-seeded project facts that go stale.

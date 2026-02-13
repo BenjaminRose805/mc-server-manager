@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Play, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { isTauri, tauriInvoke } from "@/utils/tauri";
+import { isDesktop } from "@/utils/desktop";
 
 interface LaunchButtonProps {
   instanceId: string;
@@ -25,7 +25,7 @@ export function LaunchButton({
   const handleLaunch = async () => {
     if (isDisabled) return;
 
-    if (!isTauri()) {
+    if (!isDesktop()) {
       toast.error("Launch requires the desktop app");
       return;
     }
@@ -33,7 +33,7 @@ export function LaunchButton({
     setState("launching");
 
     try {
-      await tauriInvoke("launch_game", { instanceId, accountId });
+      await window.electronAPI!.launchGame(instanceId, accountId!);
       setState("running");
       toast.success("Game launched");
     } catch (err) {

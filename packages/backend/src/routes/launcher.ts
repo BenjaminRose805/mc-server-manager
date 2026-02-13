@@ -3,6 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 import * as instanceService from "../services/instance-service.js";
 import * as accountModel from "../models/account.js";
+import { detectAllJavaInstallations, downloadJava } from "../services/java.js";
 import { VersionService } from "../services/version-service.js";
 import { AssetService } from "../services/asset-service.js";
 import { LibraryService } from "../services/library-service.js";
@@ -184,6 +185,39 @@ launcherRouter.delete("/accounts/:id", (req, res, next) => {
   try {
     accountModel.deleteAccount(req.params.id);
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+const downloadJavaSchema = z.object({
+  version: z.number().int().min(8).max(99),
+});
+
+launcherRouter.get("/java", async (_req, res, next) => {
+  try {
+    const installations = await detectAllJavaInstallations(config.dataDir);
+    res.json(installations);
+  } catch (err) {
+    next(err);
+  }
+});
+
+launcherRouter.post("/java/download", async (req, res, next) => {
+  try {
+    const parsed = downloadJavaSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const message = parsed.error.issues
+        .map((i) => `${i.path.join(".")}: ${i.message}`)
+        .join("; ");
+      throw new AppError(message, 400, "VALIDATION_ERROR");
+    }
+
+    const installation = await downloadJava(
+      parsed.data.version,
+      config.dataDir,
+    );
+    res.json(installation);
   } catch (err) {
     next(err);
   }

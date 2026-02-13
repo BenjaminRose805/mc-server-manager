@@ -4,8 +4,6 @@ import { fileURLToPath } from "node:url";
 function resolveDataDir(): string {
   if (process.env.DATA_DIR) return process.env.DATA_DIR;
 
-  if (process.env.TAURI_DATA_DIR) return process.env.TAURI_DATA_DIR;
-
   // Electron main process sets MC_DATA_DIR to app.getPath('userData')
   if (process.env.MC_DATA_DIR) return process.env.MC_DATA_DIR;
 

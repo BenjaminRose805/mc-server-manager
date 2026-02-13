@@ -10,7 +10,7 @@
     "build": "tsc",
     "dev": "electron dist/main.js",
     "dist": "electron-builder",
-    "dist:win": "cd ../../node_modules/better-sqlite3 && npx prebuild-install --platform win32 --arch x64 --runtime electron --target 33.4.11 && cd - && electron-builder --win",
+    "dist:win": "electron-builder --win",
     "rebuild": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
@@ -73,7 +73,9 @@
           ]
         }
       ],
-      "hardenedRuntime": true
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
       "target": [
@@ -106,9 +108,11 @@
       ],
       "category": "Game"
     },
-    "publish": null,
+    "publish": {
+      "provider": "github",
+      "releaseType": "draft"
+    },
     "asar": true,
-    "nodeGypRebuild": false,
-    "npmRebuild": false
+    "npmRebuild": true
   }
 }

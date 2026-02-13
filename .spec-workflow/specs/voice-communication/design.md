@@ -2,7 +2,7 @@
 
 ## Overview
 
-Add LiveKit-based voice channels to MC Server Manager. Users create voice channels, join them to communicate with low-latency audio via WebRTC. LiveKit runs as a sidecar Go binary managed by Tauri, handling all WebRTC complexity (SFU, TURN, codec negotiation). The backend generates short-lived JWT tokens for LiveKit access. The frontend uses the livekit-client SDK to connect, publish microphone audio, and subscribe to remote audio tracks. Push-to-talk is implemented via Tauri global shortcuts. Audio-only for v1.
+Add LiveKit-based voice channels to MC Server Manager. Users create voice channels, join them to communicate with low-latency audio via WebRTC. LiveKit runs as a child process managed by the Electron main process, handling all WebRTC complexity (SFU, TURN, codec negotiation). The backend generates short-lived JWT tokens for LiveKit access. The frontend uses the livekit-client SDK to connect, publish microphone audio, and subscribe to remote audio tracks. Push-to-talk is implemented via Electron's globalShortcut API. Audio-only for v1.
 
 ## Steering Document Alignment
 
@@ -17,14 +17,14 @@ No steering docs exist. This design follows existing project conventions (Expres
 - **Settings model**: LiveKit credentials and port configuration stored in existing `settings` key-value table. Reuse `getSetting`/`setSetting` functions.
 - **Zustand store pattern (`packages/frontend/src/stores/serverStore.ts`)**: Pattern for new `voiceStore.ts`. LiveKit room events write directly to store.
 - **Pino logger**: Existing logger for LiveKit lifecycle and voice event logging.
-- **Tauri sidecar pattern (`packages/desktop/src-tauri/src/lib.rs`)**: LiveKit sidecar follows the identical spawn/kill pattern as the backend sidecar.
+- **Electron child process pattern (`packages/electron/src/main.ts`)**: LiveKit child process follows the identical spawn/kill pattern as the backend process lifecycle.
 - **API client pattern (`packages/frontend/src/api/client.ts`)**: Voice API client follows existing fetch wrapper patterns with Authorization header.
 
 ### Integration Points
 - **`users` table**: Foreign key target for voice_channels.created_by. User identity and display name used in LiveKit tokens.
 - **Express app (`app.ts`)**: Mount new voice routes at `/api/voice`.
-- **Tauri `lib.rs`**: Add LiveKit sidecar spawn alongside backend sidecar. Add to AppState. Update quit handler.
-- **Tauri `tauri.conf.json`**: Register livekit-server in externalBin array.
+- **Electron `main.ts`**: Add LiveKit child process spawn alongside backend process. Update quit handler.
+- **Electron `package.json` / electron-builder config**: Bundle livekit-server binary via extraResources.
 - **Backend `index.ts`**: Generate LiveKit config YAML on startup, ensure credentials exist.
 - **Frontend routing**: Voice UI components integrated into existing layout.
 
@@ -47,15 +47,15 @@ User clicks "Join Voice Channel"
 ### Sidecar Lifecycle
 
 ```
-Tauri app starts
-  --> spawn backend sidecar (port 3001)
+Electron app starts
+  --> spawn backend child process (port 3001)
   --> backend writes livekit-config.yaml (credentials, ports)
-  --> spawn livekit-server sidecar (reads config, port 7880)
+  --> spawn livekit-server child process (reads config, port 7880)
   --> LiveKit ready for WebRTC connections
 
-Tauri app quits
-  --> kill LiveKit sidecar first
-  --> kill backend sidecar (stops MC servers)
+Electron app quits
+  --> kill LiveKit child process first
+  --> kill backend child process (stops MC servers)
   --> exit
 ```
 
@@ -122,19 +122,19 @@ Note: wsUrl is derived from the server's configured domain/IP and TLS mode. Retu
 - **Reuses**: Tailwind form patterns
 
 ### Component 9: Push-to-Talk Hook (`packages/frontend/src/hooks/usePushToTalk.ts`)
-- **Purpose**: Listen for Tauri global shortcut events and toggle microphone
-- **Dependencies**: @tauri-apps/api/event, voiceStore
-- **Reuses**: Tauri event listener pattern
+- **Purpose**: Listen for Electron IPC global shortcut events and toggle microphone
+- **Dependencies**: window.electronAPI IPC, voiceStore
+- **Reuses**: Electron IPC event listener pattern (contextBridge)
 
-### Component 10: LiveKit Download Script (`packages/desktop/scripts/download-livekit.ts`)
+### Component 10: LiveKit Download Script (`packages/electron/scripts/download-livekit.ts`)
 - **Purpose**: Download platform-specific LiveKit server binary during build
-- **Dependencies**: Node fetch, fs, child_process (for rustc target detection)
+- **Dependencies**: Node fetch, fs, child_process
 - **Reuses**: None (new build script)
 
-### Component 11: Tauri LiveKit Sidecar (modify `packages/desktop/src-tauri/src/lib.rs`)
+### Component 11: Electron LiveKit Process Manager (modify `packages/electron/src/main.ts`)
 - **Purpose**: Spawn and manage LiveKit server process lifecycle
-- **Dependencies**: Tauri shell plugin, existing AppState
-- **Reuses**: Backend sidecar spawn pattern
+- **Dependencies**: child_process, existing backend lifecycle pattern
+- **Reuses**: Backend process spawn/kill pattern from main.ts
 
 ## Data Models
 
@@ -235,19 +235,19 @@ export interface VoiceParticipant {
    - **Handling**: LiveKit SDK throws on setMicrophoneEnabled. Frontend catches and shows error.
    - **User Impact**: "Microphone access denied" error toast. User can still listen (subscribe) but not speak.
 
-6. **LiveKit sidecar fails to start**
-   - **Handling**: Tauri logs the error. Backend generates config but LiveKit does not start. Token generation succeeds but frontend connection fails.
+6. **LiveKit child process fails to start**
+   - **Handling**: Electron logs the error. Backend generates config but LiveKit does not start. Token generation succeeds but frontend connection fails.
    - **User Impact**: Voice features unavailable until app restart. Clear error in UI.
 
-7. **Unexpected LiveKit sidecar termination**
-   - **Handling**: Tauri logs termination code and signal. Active voice connections drop. Frontend receives Disconnected event, resets voice store.
+7. **Unexpected LiveKit child process termination**
+   - **Handling**: Electron logs termination code and signal. Active voice connections drop. Frontend receives Disconnected event, resets voice store.
    - **User Impact**: "Disconnected from voice channel" notification. User can rejoin manually.
 
 ## File Structure
 
 ### New Files
 ```
-packages/desktop/scripts/download-livekit.ts                 # Download LiveKit binary
+packages/electron/scripts/download-livekit.ts                 # Download LiveKit binary
 packages/backend/migrations/012_voice_channels.sql           # Voice channels table + settings
 packages/backend/src/services/livekit-config.ts              # LiveKit config generation
 packages/backend/src/services/voice-token.ts                 # LiveKit token generation
@@ -269,10 +269,9 @@ packages/backend/src/services/settings.ts                    # ensureLiveKitCred
 packages/backend/package.json                                # Add livekit-server-sdk
 packages/frontend/package.json                               # Add livekit-client
 packages/frontend/src/App.tsx                                # Integrate voice UI
-packages/desktop/src-tauri/src/lib.rs                        # LiveKit sidecar + global shortcut
-packages/desktop/src-tauri/tauri.conf.json                   # Add livekit-server to externalBin
-packages/desktop/src-tauri/Cargo.toml                        # Add global-shortcut plugin
-packages/desktop/package.json                                # Add download-livekit script
+packages/electron/src/main.ts                                # LiveKit child process + global shortcut
+packages/electron/src/ipc.ts                                 # Push-to-talk IPC handlers
+packages/electron/package.json                               # Add download-livekit script + electron-builder extraResources
 ```
 
 ## Dependencies
@@ -283,11 +282,11 @@ packages/desktop/package.json                                # Add download-live
 ### New Frontend npm Packages
 - `livekit-client` (^2.6.0) -- LiveKit WebRTC client SDK. Required for connecting to rooms and managing audio tracks.
 
-### New Rust Crates (Tauri)
-- `tauri-plugin-global-shortcut` (2.x) -- Global keyboard shortcuts for push-to-talk.
+### Electron Built-in APIs
+- `globalShortcut` -- Global keyboard shortcuts for push-to-talk (built into Electron, no extra dependency).
 
 ### External Binary
-- `livekit-server` (1.7.2+) -- LiveKit SFU binary, downloaded per-platform via build script. Bundled as Tauri sidecar.
+- `livekit-server` (1.7.2+) -- LiveKit SFU binary, downloaded per-platform via build script. Bundled via electron-builder extraResources.
 
 ## Network Requirements
 
@@ -310,7 +309,7 @@ When voice communication is used with remote users, the following ports must be 
 - Key verification: token generation with correct grants, voice channel CRUD, config YAML generation.
 
 ### Integration Testing
-- **LiveKit startup**: Tauri spawns LiveKit, config.yaml generated, server listens on port 7880.
+- **LiveKit startup**: Electron spawns LiveKit, config.yaml generated, server listens on port 7880.
 - **Voice channel CRUD**: Create, list, update, delete channels via REST API.
 - **Token generation**: Backend generates valid JWT, frontend can connect to LiveKit with it.
 - **Join/leave flow**: Join channel, see participant list update, leave channel, participant removed.

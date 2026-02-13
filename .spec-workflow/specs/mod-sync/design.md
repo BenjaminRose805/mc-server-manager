@@ -130,8 +130,8 @@ computeDiff(manifest, localMods)
 ### Component 4: ModDownloadService (`packages/frontend/src/services/mod-download-service.ts`)
 - **Purpose**: Download mod files from trusted sources, verify SHA-1 hashes, install to client instance. Manages parallel downloads with concurrency limiting and progress reporting.
 - **Interfaces**: `downloadAndInstall(instanceId: string, mods: ManifestMod[], onProgress: (progress: ModSyncProgress) => void): Promise<ModDownloadResult>`, private `downloadFile(url: string): Promise<Uint8Array>`, private `isTrustedUrl(url: string): boolean`, private `computeSHA1(data: Uint8Array): string`, private `installMod(instanceId, mod, fileData): Promise<void>`
-- **Dependencies**: ManifestMod, ModSyncProgress types, Tauri invoke API (for file system operations)
-- **Reuses**: Tauri HTTP client for downloads (bypasses CORS), Tauri file system for mod installation
+- **Dependencies**: ManifestMod, ModSyncProgress types, Electron IPC API (for file system operations)
+- **Reuses**: Electron IPC for downloads (bypasses CORS), Electron IPC for file system mod installation
 - **Security Enhancement**: For mods with a non-null `modrinthId` and `modrinthVersionId`, cross-verify the file hash against the Modrinth API (`GET https://api.modrinth.com/v2/version/{versionId}`) before trusting the manifest's hash. This prevents a compromised host from lying about mod hashes. For mods without a Modrinth ID (community server downloads), show a prominent warning in the sync dialog: "This mod is not independently verified. Only proceed if you trust the server owner." Additionally, if `mod.modrinthId` is non-null, validate that `mod.downloadUrl` starts with `https://cdn.modrinth.com/`. If it does not, treat the mod as unverified regardless of the modrinthId claim — apply the warning badge and require the trust checkbox.
 
 ### Component 5: ModSyncDialog (`packages/frontend/src/components/community/ModSyncDialog.tsx`)
@@ -283,7 +283,7 @@ packages/frontend/src/components/ServerCard.tsx                # Wire sync into 
 - None required. All functionality uses existing packages (express, better-sqlite3, path, crypto).
 
 ### New Frontend npm Packages
-- None required. Uses existing Tauri invoke API for file system operations and HTTP downloads. SHA-1 computed via Web Crypto API or Tauri backend.
+- None required. Uses existing Electron IPC API (window.electronAPI) for file system operations and HTTP downloads. SHA-1 computed via Web Crypto API.
 
 ## Testing Strategy
 

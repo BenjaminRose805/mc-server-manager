@@ -138,7 +138,7 @@ Dependencies: Epic 5 (Multi-User Foundation) for user accounts and authenticatio
 1. WHEN a message arrives in a channel the user is NOT currently viewing THEN a desktop notification SHALL appear showing the sender name and message preview (first 100 characters).
 2. WHEN a friend request is received THEN a desktop notification SHALL appear showing the requester's username.
 3. WHEN the app is in the foreground and the user is viewing the active channel THEN no notification SHALL be shown for messages in that channel.
-4. Desktop notifications SHALL use the Tauri notification plugin (native OS notifications).
+4. Desktop notifications SHALL use the Electron Notification API (native OS notifications).
 5. WHEN the user has not granted notification permission THEN the app SHALL request it once on first load.
 
 ---

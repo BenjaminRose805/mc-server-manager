@@ -22,7 +22,7 @@ import { api } from "@/api/client";
 import { ModList } from "@/components/ModList";
 import { AccountManager } from "@/components/launcher/AccountManager";
 import { DownloadProgress } from "@/components/launcher/DownloadProgress";
-import { isTauri, tauriInvoke } from "@/utils/tauri";
+import { isDesktop } from "@/utils/desktop";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -482,11 +482,8 @@ export default function InstanceDetail() {
     setPreparing(true);
     try {
       await api.prepareLaunch(id);
-      if (isTauri()) {
-        await tauriInvoke("launch_game", {
-          instanceId: id,
-          accountId: selectedAccountId,
-        });
+      if (isDesktop()) {
+        await window.electronAPI!.launchGame(id, selectedAccountId);
         toast.success("Game launched!");
       } else {
         toast.info("Game files prepared. Launch requires the desktop app.");

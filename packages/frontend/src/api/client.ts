@@ -48,7 +48,7 @@ class ApiError extends Error {
   }
 }
 
-import { getBackendBaseUrlSync } from "@/utils/tauri";
+import { getBackendBaseUrlSync } from "@/utils/desktop";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {

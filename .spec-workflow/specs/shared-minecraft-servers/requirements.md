@@ -71,7 +71,7 @@ After Epic 5 (Multi-User Foundation) adds authentication and Epic 6 (Friends and
 #### Acceptance Criteria
 
 1. WHEN a user with "join" permission clicks the Join button on a running server THEN the system SHALL return connection info (address and port) and the server version.
-2. WHEN the application is running as a Tauri desktop app with Epic 3 (Client Launcher) available THEN the system SHALL launch the Minecraft client automatically configured for the correct server address and version.
+2. WHEN the application is running as an Electron desktop app with the Client Launcher available THEN the system SHALL launch the Minecraft client automatically configured for the correct server address and version.
 3. WHEN Epic 3 is NOT available THEN the system SHALL copy the server address to the clipboard and show a toast notification confirming the copy.
 4. WHEN a user without "join" permission attempts to join THEN the system SHALL deny the request with a 403 Forbidden error.
 5. WHEN a user clicks Join on a server that is not running THEN the Join button SHALL be disabled with a visual indicator that the server is offline.

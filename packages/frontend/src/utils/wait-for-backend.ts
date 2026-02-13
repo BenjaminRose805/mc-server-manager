@@ -1,4 +1,4 @@
-import { getBackendBaseUrl } from "./tauri";
+import { getBackendBaseUrl } from "./desktop";
 
 export async function waitForBackend(
   maxAttempts: number = 60,

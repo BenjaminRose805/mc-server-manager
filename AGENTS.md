@@ -8,12 +8,13 @@ MC Server Manager is a self-hosted web application for managing Minecraft Java E
 
 ## Architecture
 
-**Monorepo** using npm workspaces with three packages:
+**Monorepo** using npm workspaces with four packages:
 
 ```
 packages/backend/   -- Express + WebSocket API server (Node.js)
 packages/frontend/  -- React SPA (Vite)
-shared/             -- TypeScript type definitions shared by both
+packages/electron/  -- Electron desktop app wrapper
+shared/             -- TypeScript type definitions shared by all
 ```
 
 ### Core Architecture Pattern
@@ -60,6 +61,8 @@ WebSocket Server ---> Same services, different transport
 | Icons | lucide-react | 0.563.x |
 | Toasts | sonner | 2.x |
 | IDs | nanoid | 5.x |
+| Desktop framework | Electron | 33.x |
+| Desktop packaging | electron-builder | 25.x |
 
 ## Build & Run
 
@@ -90,6 +93,7 @@ PLAN.md                   -- 621-line architecture document and phased build pla
 packages/
   backend/                -- Express API server
   frontend/               -- React SPA
+  electron/               -- Electron desktop app (main process, IPC, auth, launcher)
 shared/                   -- Shared types package (@mc-server-manager/shared)
 data/                     -- Runtime data directory (gitignored)
   servers/                -- Individual MC server directories (nanoid-named)
@@ -166,6 +170,8 @@ PUT               /api/system/settings
 GET               /api/versions/vanilla
 POST              /api/downloads
 GET               /api/downloads/:jobId
+GET               /api/launcher/java
+POST              /api/launcher/java/download
 ```
 
 ## Important Files
@@ -178,6 +184,11 @@ GET               /api/downloads/:jobId
 | `shared/src/index.ts` | All shared types, interfaces, constants, utilities |
 | `packages/frontend/src/stores/serverStore.ts` | Zustand store + WS event wiring |
 | `packages/frontend/src/api/ws.ts` | WebSocket client singleton with auto-reconnect |
+| `packages/electron/src/main.ts` | Electron main process -- window, tray, backend lifecycle |
+| `packages/electron/src/auth.ts` | Microsoft OAuth2 device-code auth (ported from Rust) |
+| `packages/electron/src/launcher.ts` | Minecraft game launcher -- spawn/track/kill game processes |
+| `packages/electron/src/secure-storage.ts` | OS-level credential encryption via Electron safeStorage |
+| `packages/electron/src/ipc.ts` | IPC handler registration -- bridges main↔renderer |
 | `PLAN.md` | Complete architecture document and build plan |
 
 ## Risk Areas

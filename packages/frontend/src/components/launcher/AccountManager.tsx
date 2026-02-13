@@ -13,11 +13,10 @@ import { toast } from "sonner";
 import type {
   LauncherAccount,
   MSAuthDeviceCode,
-  MSAuthStatus,
 } from "@mc-server-manager/shared";
 import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
-import { isTauri, tauriInvoke } from "@/utils/tauri";
+import { isDesktop } from "@/utils/desktop";
 
 interface AccountManagerProps {
   selectedAccountId: string | null;
@@ -79,7 +78,7 @@ export function AccountManager({
   }, []);
 
   const startAuth = async () => {
-    if (!isTauri()) {
+    if (!isDesktop()) {
       toast.error("Authentication requires the desktop app");
       return;
     }
@@ -88,13 +87,13 @@ export function AccountManager({
     setAuthError(null);
 
     try {
-      const code = await tauriInvoke<MSAuthDeviceCode>("ms_auth_start");
+      const code = await window.electronAPI!.msAuthStart();
       setDeviceCode(code);
       setAuthPhase("awaiting");
 
       pollRef.current = setInterval(async () => {
         try {
-          const status = await tauriInvoke<MSAuthStatus>("ms_auth_poll");
+          const status = await window.electronAPI!.msAuthPoll();
 
           if (status.status === "complete" && status.account) {
             if (pollRef.current) clearInterval(pollRef.current);
@@ -141,9 +140,9 @@ export function AccountManager({
 
   const removeAccount = async (account: LauncherAccount) => {
     try {
-      if (isTauri()) {
+      if (isDesktop()) {
         try {
-          await tauriInvoke("remove_account", { accountUuid: account.uuid });
+          await window.electronAPI!.removeAccount(account.uuid);
         } catch {
           /* noop */
         }
@@ -193,7 +192,7 @@ export function AccountManager({
         </button>
       </div>
 
-      {!isTauri() && (
+      {!isDesktop() && (
         <div className="flex items-start gap-3 rounded-lg border border-sky-500/20 bg-sky-500/5 p-3">
           <Monitor className="mt-0.5 h-4 w-4 shrink-0 text-sky-400" />
           <p className="text-sm text-sky-300/80">

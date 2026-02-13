@@ -1,0 +1,230 @@
+# Build and release Electron desktop app for Windows, macOS, and Linux.
+#
+# Triggers:
+#   - Push a tag matching v* (e.g., v0.2.0, v1.0.0-beta.1) to build + create draft release
+#   - Manual workflow_dispatch to build without creating a release (for testing)
+#
+# Code signing is optional:
+#   - macOS: Set MAC_CERTIFICATE, MAC_CERTIFICATE_PASSWORD, APPLE_ID,
+#            APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID as repository secrets
+#   - Windows: Set WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD as repository secrets
+#   - If secrets are not configured, unsigned installers are produced (no failure)
+
+name: Build Electron App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # Required for creating GitHub Releases
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Linux build: AppImage + DEB (x64)
+  # ---------------------------------------------------------------------------
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Cache Electron and electron-builder
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages (shared -> backend -> frontend -> electron)
+        run: |
+          npm run build
+          npm run build -w @mc-server-manager/electron
+
+      # Rebuild native modules (better-sqlite3, argon2) against Electron's Node.js version.
+      # This is critical -- without it, native modules will crash at runtime.
+      - name: Rebuild native modules for Electron
+        run: npx electron-builder install-app-deps
+        working-directory: packages/electron
+
+      - name: Package Electron app
+        run: npx electron-builder --linux --publish never
+        working-directory: packages/electron
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: |
+            packages/electron/release/*.AppImage
+            packages/electron/release/*.deb
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # macOS build: DMG (x64 + arm64)
+  #
+  # Code signing and notarization are conditional on secrets being configured.
+  # Without them, unsigned DMGs are produced.
+  # ---------------------------------------------------------------------------
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Cache Electron and electron-builder
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages (shared -> backend -> frontend -> electron)
+        run: |
+          npm run build
+          npm run build -w @mc-server-manager/electron
+
+      - name: Rebuild native modules for Electron
+        run: npx electron-builder install-app-deps
+        working-directory: packages/electron
+
+      - name: Package Electron app
+        run: npx electron-builder --mac --publish never
+        working-directory: packages/electron
+        env:
+          # Code signing (optional -- skipped if secrets not set)
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          # Notarization (optional -- skipped if secrets not set)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifacts
+          path: |
+            packages/electron/release/*.dmg
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Windows build: NSIS installer (x64)
+  #
+  # Code signing is conditional on secrets being configured.
+  # Without them, unsigned installers are produced (users will see SmartScreen warning).
+  # ---------------------------------------------------------------------------
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Cache Electron and electron-builder
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages (shared -> backend -> frontend -> electron)
+        run: |
+          npm run build
+          npm run build -w @mc-server-manager/electron
+
+      - name: Rebuild native modules for Electron
+        run: npx electron-builder install-app-deps
+        working-directory: packages/electron
+
+      - name: Package Electron app
+        run: npx electron-builder --win --publish never
+        working-directory: packages/electron
+        env:
+          # Code signing (optional -- skipped if secrets not set)
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: |
+            packages/electron/release/*.exe
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Release: Create a draft GitHub Release with all platform artifacts.
+  # Only runs on tag pushes (not manual workflow_dispatch).
+  # ---------------------------------------------------------------------------
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-artifacts
+          path: release-assets
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-artifacts
+          path: release-assets
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-artifacts
+          path: release-assets
+
+      - name: List release assets
+        run: ls -la release-assets/
+
+      - name: Create draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

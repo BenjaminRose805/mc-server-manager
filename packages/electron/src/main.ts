@@ -4,6 +4,7 @@ import type { WebSocketServer } from "ws";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createTray } from "./tray.js";
+import { registerIpcHandlers } from "./ipc.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = !app.isPackaged;
@@ -133,6 +134,8 @@ async function main(): Promise<void> {
   setElectronEnv();
 
   await app.whenReady();
+
+  registerIpcHandlers();
 
   if (!isDev) {
     await startBackend();

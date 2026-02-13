@@ -7,7 +7,7 @@ import type {
   AuthStatusResponse,
 } from "@mc-server-manager/shared";
 import { authFetch } from "./client.js";
-import { getBackendBaseUrlSync } from "@/utils/tauri";
+import { getBackendBaseUrlSync } from "@/utils/desktop";
 
 class ApiError extends Error {
   constructor(
