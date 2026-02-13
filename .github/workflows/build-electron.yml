@@ -56,12 +56,6 @@ jobs:
           sudo cp node_modules/app-builder-bin/linux/x64/app-builder /usr/local/bin/app-builder
           app-builder --version
 
-      - name: Rebuild native modules for Electron
-        run: npx @electron/rebuild -w packages/electron -m .
-        env:
-          npm_config_runtime: electron
-          npm_config_target: 33.4.11
-
       - name: Build all packages (shared -> backend -> frontend -> electron)
         run: |
           npm run build
@@ -117,12 +111,6 @@ jobs:
           chmod +x node_modules/app-builder-bin/mac/app-builder_*
           sudo cp node_modules/app-builder-bin/mac/app-builder_arm64 /usr/local/bin/app-builder
           app-builder --version
-
-      - name: Rebuild native modules for Electron
-        run: npx @electron/rebuild -w packages/electron -m .
-        env:
-          npm_config_runtime: electron
-          npm_config_target: 33.4.11
 
       - name: Build all packages (shared -> backend -> frontend -> electron)
         run: |
@@ -182,12 +170,6 @@ jobs:
           Copy-Item "node_modules\app-builder-bin\win\x64\app-builder.exe" "$binDir\app-builder.exe"
           "$binDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           & "$binDir\app-builder.exe" --version
-
-      - name: Rebuild native modules for Electron
-        run: npx @electron/rebuild -w packages/electron -m .
-        env:
-          npm_config_runtime: electron
-          npm_config_target: 33.4.11
 
       - name: Build all packages (shared -> backend -> frontend -> electron)
         run: |

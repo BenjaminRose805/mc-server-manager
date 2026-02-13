@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "electron": "33.4.11",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.8.0",
     "typescript": "^5.7.0"
   },
   "build": {
@@ -122,6 +122,6 @@
       "releaseType": "draft"
     },
     "asar": true,
-    "npmRebuild": false
+    "npmRebuild": true
   }
 }
