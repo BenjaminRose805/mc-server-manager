@@ -22,7 +22,7 @@ fn spawn_backend(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error
 
     let sidecar = app
         .shell()
-        .sidecar("binaries/mc-backend")
+        .sidecar("mc-backend")
         .expect("Failed to create sidecar command")
         .env("TAURI_DATA_DIR", data_dir.to_string_lossy().to_string())
         .env("NODE_ENV", "production")

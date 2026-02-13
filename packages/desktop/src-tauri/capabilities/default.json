@@ -8,7 +8,7 @@
       "identifier": "shell:allow-execute",
       "allow": [
         {
-          "name": "binaries/mc-backend",
+          "name": "mc-backend",
           "sidecar": true,
           "args": true
         }

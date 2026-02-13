@@ -6,8 +6,6 @@ import {
   rmSync,
   createWriteStream,
   chmodSync,
-  readdirSync,
-  unlinkSync,
 } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -47,7 +45,6 @@ const rootDir = join(_scriptDir, "..", "..", "..");
 const backendDir = join(rootDir, "packages", "backend");
 const tauriDir = join(_scriptDir, "..", "src-tauri");
 const resourcesDir = join(tauriDir, "resources");
-const binariesDir = join(tauriDir, "binaries");
 const isWindows = targetInfo.platform === "win32";
 const ext = isWindows ? ".exe" : "";
 
@@ -207,20 +204,11 @@ async function main(): Promise<void> {
     stdio: "inherit",
   });
 
-  mkdirSync(binariesDir, { recursive: true });
   const launcherSrc = join(tauriDir, "target", "release", `mc-backend${ext}`);
-  const launcherDest = join(binariesDir, `mc-backend-${rustTarget}${ext}`);
+  const launcherDest = join(tauriDir, `mc-backend-${rustTarget}${ext}`);
   cpSync(launcherSrc, launcherDest);
 
-  console.log("Step 6: Cleaning up old pkg artifacts...");
-  if (existsSync(binariesDir)) {
-    for (const f of readdirSync(binariesDir)) {
-      if (f.startsWith("mc-server-backend-") || f === "better_sqlite3.node") {
-        console.log(`  Removing old artifact: ${f}`);
-        unlinkSync(join(binariesDir, f));
-      }
-    }
-  }
+  console.log("Step 6: Cleaning up old artifacts...");
 
   const bundleDir = join(backendDir, "bundle");
   if (existsSync(bundleDir)) {
