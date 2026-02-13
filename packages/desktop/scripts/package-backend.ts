@@ -77,7 +77,15 @@ execSync(
   { cwd: backendDir, stdio: "inherit" },
 );
 
-console.log("Step 3: Copying native addon files...");
+console.log("Step 3a: Copying migrations...");
+const migrationsSrc = join(backendDir, "migrations");
+const migrationsDest = join(resourcesDir, "migrations");
+if (existsSync(migrationsSrc)) {
+  rmSync(migrationsDest, { recursive: true, force: true });
+  cpSync(migrationsSrc, migrationsDest, { recursive: true });
+}
+
+console.log("Step 3b: Copying native addon files...");
 const resNodeModules = join(resourcesDir, "node_modules");
 
 function copyNativeAddon(name: string, parts: string[]): void {

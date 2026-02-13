@@ -76,6 +76,7 @@ fn main() {
         .arg(&script)
         .args(env::args().skip(1))
         .env("NODE_PATH", res.join("node_modules"))
+        .env("MC_MIGRATIONS_DIR", res.join("migrations"))
         .envs(env::vars())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { config } from "../config.js";
 import { logger } from "../utils/logger.js";
 
@@ -66,14 +67,20 @@ function runMigrations(database: Database.Database): void {
     );
   `);
 
-  const migrationsDir =
-    process.env.MC_MIGRATIONS_DIR ??
-    path.resolve(
-      path.dirname(new URL(import.meta.url).pathname),
+  let migrationsDir: string;
+  if (process.env.MC_MIGRATIONS_DIR) {
+    migrationsDir = process.env.MC_MIGRATIONS_DIR;
+  } else {
+    const thisFile = import.meta.url.startsWith("file:")
+      ? fileURLToPath(import.meta.url)
+      : import.meta.url;
+    migrationsDir = path.resolve(
+      path.dirname(thisFile),
       "..",
       "..",
       "migrations",
     );
+  }
 
   if (!fs.existsSync(migrationsDir)) {
     logger.warn({ migrationsDir }, "Migrations directory not found");
