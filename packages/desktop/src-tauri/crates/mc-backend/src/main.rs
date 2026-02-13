@@ -1,7 +1,7 @@
 use std::{
     env, fs,
     path::PathBuf,
-    process::{exit, Command},
+    process::{exit, Command, Stdio},
 };
 
 fn resources_dir() -> PathBuf {
@@ -72,12 +72,14 @@ fn main() {
         exit(1);
     }
 
-    let status = Command::new(&node)
+    let output = Command::new(&node)
         .arg(&script)
         .args(env::args().skip(1))
         .env("NODE_PATH", res.join("node_modules"))
         .envs(env::vars())
-        .status()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
         .unwrap_or_else(|e| {
             let msg = format!("Failed to start backend: {e}");
             eprintln!("{msg}");
@@ -85,9 +87,15 @@ fn main() {
             exit(1);
         });
 
-    let code = status.code().unwrap_or(1);
+    let code = output.status.code().unwrap_or(1);
     if code != 0 {
-        write_log(&log, &log_lines, &format!("Exit code: {code}"));
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        write_log(
+            &log,
+            &log_lines,
+            &format!("Exit code: {code}\n--- stdout ---\n{stdout}\n--- stderr ---\n{stderr}"),
+        );
     }
     exit(code);
 }
