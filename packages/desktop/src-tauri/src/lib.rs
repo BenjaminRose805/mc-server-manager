@@ -81,10 +81,22 @@ pub fn run() {
         ])
         .setup(|app| {
             if std::env::var("TAURI_DEV_BACKEND_EXTERNAL").is_err() {
-                if let Err(e) = spawn_backend(app.handle()) {
-                    log::error!("Failed to spawn backend sidecar: {e}");
-                    eprintln!("Failed to spawn backend sidecar: {e}");
+                let log_path = std::env::temp_dir().join("mc-manager-startup.log");
+                let mut log_lines = vec![
+                    format!("startup at {:?}", std::time::SystemTime::now()),
+                ];
+
+                match spawn_backend(app.handle()) {
+                    Ok(()) => {
+                        log_lines.push("sidecar spawned successfully".to_string());
+                    }
+                    Err(e) => {
+                        log_lines.push(format!("sidecar spawn FAILED: {e}"));
+                        log::error!("Failed to spawn backend sidecar: {e}");
+                    }
                 }
+
+                let _ = std::fs::write(&log_path, log_lines.join("\n"));
             }
 
             let show_item =
