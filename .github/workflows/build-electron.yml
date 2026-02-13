@@ -50,6 +50,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Ensure app-builder-bin binaries
+        run: |
+          if [ ! -f node_modules/app-builder-bin/linux/x64/app-builder ]; then
+            echo "app-builder binary missing after npm ci, reinstalling..."
+            rm -rf node_modules/app-builder-bin
+            npm install app-builder-bin
+          fi
+
       - name: Build all packages (shared -> backend -> frontend -> electron)
         run: |
           npm run build
@@ -97,6 +105,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Ensure app-builder-bin binaries
+        run: |
+          if [ ! -f node_modules/app-builder-bin/mac/app-builder_arm64 ]; then
+            echo "app-builder binary missing after npm ci, reinstalling..."
+            rm -rf node_modules/app-builder-bin
+            npm install app-builder-bin
+          fi
 
       - name: Build all packages (shared -> backend -> frontend -> electron)
         run: |
@@ -152,6 +168,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Ensure app-builder-bin binaries
+        shell: bash
+        run: |
+          if [ ! -f node_modules/app-builder-bin/win/x64/app-builder.exe ]; then
+            echo "app-builder binary missing after npm ci, reinstalling..."
+            rm -rf node_modules/app-builder-bin
+            npm install app-builder-bin
+          fi
 
       - name: Build all packages (shared -> backend -> frontend -> electron)
         run: |
