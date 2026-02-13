@@ -114,7 +114,8 @@
           ]
         }
       ],
-      "category": "Game"
+      "category": "Game",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "publish": {
       "provider": "github",
