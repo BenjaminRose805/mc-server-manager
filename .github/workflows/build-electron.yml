@@ -55,12 +55,6 @@ jobs:
           npm run build
           npm run build -w @mc-server-manager/electron
 
-      # Rebuild native modules (better-sqlite3, argon2) against Electron's Node.js version.
-      # This is critical -- without it, native modules will crash at runtime.
-      - name: Rebuild native modules for Electron
-        run: npx electron-builder install-app-deps
-        working-directory: packages/electron
-
       - name: Package Electron app
         run: npx electron-builder --linux --publish never
         working-directory: packages/electron
@@ -109,10 +103,6 @@ jobs:
         run: |
           npm run build
           npm run build -w @mc-server-manager/electron
-
-      - name: Rebuild native modules for Electron
-        run: npx electron-builder install-app-deps
-        working-directory: packages/electron
 
       - name: Package Electron app
         run: npx electron-builder --mac --publish never
@@ -169,10 +159,6 @@ jobs:
         run: |
           npm run build
           npm run build -w @mc-server-manager/electron
-
-      - name: Rebuild native modules for Electron
-        run: npx electron-builder install-app-deps
-        working-directory: packages/electron
 
       - name: Package Electron app
         run: npx electron-builder --win --publish never
