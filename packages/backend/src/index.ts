@@ -30,42 +30,83 @@ export { initDatabase, closeDatabase } from "./services/database.js";
 export { serverManager } from "./services/server-manager.js";
 export { setupWebSocketServer } from "./ws/index.js";
 
+import fs from "node:fs";
+import path from "node:path";
+
+const MAX_PORT_RETRIES = 10;
+
+function tryListen(
+  httpServer: HttpServer,
+  port: number,
+  host: string,
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const onError = (err: NodeJS.ErrnoException) => {
+      httpServer.removeListener("error", onError);
+      reject(err);
+    };
+    httpServer.on("error", onError);
+    httpServer.listen(port, host, () => {
+      httpServer.removeListener("error", onError);
+      resolve(port);
+    });
+  });
+}
+
 /**
  * Start the HTTP server and attach WebSocket server.
- * Returns { httpServer, wss } for the caller to manage.
+ * If the port is in use, retries on successive ports.
+ * Writes the actual port to `<dataDir>/backend.port` for discovery.
  */
 export async function startServer(
   port?: number,
   host?: string,
-): Promise<{ httpServer: HttpServer; wss: WebSocketServer }> {
-  const p = port ?? config.port;
+): Promise<{
+  httpServer: HttpServer;
+  wss: WebSocketServer;
+  actualPort: number;
+}> {
+  let p = port ?? config.port;
   const h = host ?? config.host;
 
   const tlsResult = await setupTLS(config.tls, config.dataDir);
 
-  return new Promise((resolve) => {
-    let httpServer: HttpServer;
+  let httpServer: HttpServer;
+  if (tlsResult) {
+    httpServer = https.createServer(
+      { cert: tlsResult.cert, key: tlsResult.key },
+      app,
+    );
+  } else {
+    httpServer = (await import("node:http")).createServer(app);
+  }
 
-    if (tlsResult) {
-      httpServer = https.createServer(
-        { cert: tlsResult.cert, key: tlsResult.key },
-        app,
-      );
-      httpServer.listen(p, h, () => {
-        logger.info(`Backend server running at https://${h}:${p}`);
-        logger.info(`Health check: https://${h}:${p}/api/health`);
-        resolve({ httpServer, wss });
-      });
-    } else {
-      httpServer = app.listen(p, h, () => {
-        logger.info(`Backend server running at http://${h}:${p}`);
-        logger.info(`Health check: http://${h}:${p}/api/health`);
-        resolve({ httpServer, wss });
-      });
+  let actualPort = p;
+  for (let attempt = 0; attempt < MAX_PORT_RETRIES; attempt++) {
+    try {
+      actualPort = await tryListen(httpServer, p + attempt, h);
+      break;
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code === "EADDRINUSE") {
+        logger.warn({ port: p + attempt }, "Port in use, trying next");
+        if (attempt === MAX_PORT_RETRIES - 1) throw err;
+        continue;
+      }
+      throw err;
     }
+  }
 
-    const wss = setupWebSocketServer(httpServer);
-  });
+  const proto = tlsResult ? "https" : "http";
+  logger.info(`Backend server running at ${proto}://${h}:${actualPort}`);
+
+  const portFile = path.join(config.dataDir, "backend.port");
+  fs.writeFileSync(portFile, String(actualPort), "utf-8");
+
+  // Machine-readable line for sidecar/Tauri to parse
+  console.log(`__BACKEND_PORT__=${actualPort}`);
+
+  const wss = setupWebSocketServer(httpServer);
+  return { httpServer, wss, actualPort };
 }
 
 /**
@@ -136,7 +177,7 @@ const isStandaloneEntry =
 async function main() {
   initDatabase();
 
-  const { httpServer, wss } = await startServer();
+  const { httpServer, wss, actualPort } = await startServer();
 
   autoStartServers();
   startPeriodicUpdateCheck();
@@ -154,7 +195,7 @@ async function main() {
   );
 
   if (config.upnpEnabled) {
-    setupPortForwarding(config.port).catch((err) => {
+    setupPortForwarding(actualPort).catch((err) => {
       logger.error({ err }, "UPnP port forwarding failed");
     });
   }
@@ -163,7 +204,7 @@ async function main() {
     stopPeriodicUpdateCheck();
     clearInterval(cleanupInterval);
     if (config.upnpEnabled) {
-      await removePortForwarding(config.port);
+      await removePortForwarding(actualPort);
     }
     await shutdownServer(httpServer, wss);
     process.exit(0);

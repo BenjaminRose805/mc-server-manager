@@ -48,6 +48,8 @@ class ApiError extends Error {
   }
 }
 
+import { getBackendBaseUrlSync } from "@/utils/tauri";
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -58,7 +60,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(path, {
+  const url = `${getBackendBaseUrlSync()}${path}`;
+  const res = await fetch(url, {
     ...options,
     headers: {
       ...headers,
@@ -97,7 +100,8 @@ export async function authFetch<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  let res = await fetch(path, {
+  const base = getBackendBaseUrlSync();
+  let res = await fetch(`${base}${path}`, {
     ...options,
     headers,
   });
@@ -110,7 +114,7 @@ export async function authFetch<T>(
         throw new Error("No refresh token");
       }
 
-      const refreshRes = await fetch("/api/auth/refresh", {
+      const refreshRes = await fetch(`${base}/api/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken }),
@@ -127,7 +131,7 @@ export async function authFetch<T>(
       }
 
       headers["Authorization"] = `Bearer ${refreshData.accessToken}`;
-      res = await fetch(path, {
+      res = await fetch(`${base}${path}`, {
         ...options,
         headers,
       });

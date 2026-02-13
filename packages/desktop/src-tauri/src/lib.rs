@@ -11,6 +11,12 @@ use tauri_plugin_shell::ShellExt;
 
 struct AppState {
     backend_child: Mutex<Option<CommandChild>>,
+    backend_port: Mutex<Option<u16>>,
+}
+
+#[tauri::command]
+fn get_backend_port(state: tauri::State<'_, AppState>) -> Option<u16> {
+    *state.backend_port.lock().unwrap()
 }
 
 fn spawn_backend(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
@@ -33,11 +39,20 @@ fn spawn_backend(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error
     let state = app.state::<AppState>();
     *state.backend_child.lock().unwrap() = Some(child);
 
+    let app_handle = app.clone();
     tauri::async_runtime::spawn(async move {
         while let Some(event) = rx.recv().await {
             match event {
                 CommandEvent::Stdout(line) => {
-                    log::info!("[backend] {}", String::from_utf8_lossy(&line));
+                    let text = String::from_utf8_lossy(&line);
+                    log::info!("[backend] {}", text);
+                    if let Some(port_str) = text.strip_prefix("__BACKEND_PORT__=") {
+                        if let Ok(port) = port_str.trim().parse::<u16>() {
+                            let state = app_handle.state::<AppState>();
+                            *state.backend_port.lock().unwrap() = Some(port);
+                            log::info!("Backend port discovered: {}", port);
+                        }
+                    }
                 }
                 CommandEvent::Stderr(line) => {
                     log::warn!("[backend] {}", String::from_utf8_lossy(&line));
@@ -64,10 +79,12 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(AppState {
             backend_child: Mutex::new(None),
+            backend_port: Mutex::new(None),
         })
         .manage(auth::AuthState::new())
         .manage(launcher::LauncherState::new())
         .invoke_handler(tauri::generate_handler![
+            get_backend_port,
             auth::ms_auth_start,
             auth::ms_auth_poll,
             auth::ms_auth_refresh,

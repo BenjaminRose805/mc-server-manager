@@ -2,11 +2,7 @@ import type {
   WsClientMessage,
   WsServerMessage,
 } from "@mc-server-manager/shared";
-import { isTauri } from "../utils/tauri";
-
-// ---------------------------------------------------------------------------
-// WebSocket client singleton with automatic reconnection
-// ---------------------------------------------------------------------------
+import { isTauri, getBackendBaseUrlSync } from "../utils/tauri";
 
 type MessageHandler = (msg: WsServerMessage) => void;
 type ConnectionHandler = () => void;
@@ -26,11 +22,11 @@ class WsClient {
   private explicitClose = false;
   private _connected = false;
 
-  /** Lazily build the URL on first connect so we never touch `window` at import time */
   private getUrl(): string {
     if (!this.url) {
       if (isTauri()) {
-        this.url = "ws://localhost:3001/ws";
+        const base = getBackendBaseUrlSync().replace(/^http/, "ws");
+        this.url = `${base || "ws://localhost:3001"}/ws`;
       } else {
         const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
         this.url = `${proto}//${window.location.host}/ws`;

@@ -7,6 +7,7 @@ import type {
   AuthStatusResponse,
 } from "@mc-server-manager/shared";
 import { authFetch } from "./client.js";
+import { getBackendBaseUrlSync } from "@/utils/tauri";
 
 class ApiError extends Error {
   constructor(
@@ -20,7 +21,7 @@ class ApiError extends Error {
 }
 
 export async function setupAccount(data: SetupRequest): Promise<AuthResponse> {
-  const res = await fetch("/api/auth/setup", {
+  const res = await fetch(`${getBackendBaseUrlSync()}/api/auth/setup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -35,7 +36,7 @@ export async function setupAccount(data: SetupRequest): Promise<AuthResponse> {
 }
 
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
-  const res = await fetch("/api/auth/register", {
+  const res = await fetch(`${getBackendBaseUrlSync()}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -50,7 +51,7 @@ export async function register(data: RegisterRequest): Promise<AuthResponse> {
 }
 
 export async function login(data: LoginRequest): Promise<AuthResponse> {
-  const res = await fetch("/api/auth/login", {
+  const res = await fetch(`${getBackendBaseUrlSync()}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -72,7 +73,7 @@ export async function login(data: LoginRequest): Promise<AuthResponse> {
 export async function refreshAccessToken(
   refreshToken: string,
 ): Promise<RefreshResponse> {
-  const res = await fetch("/api/auth/refresh", {
+  const res = await fetch(`${getBackendBaseUrlSync()}/api/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refreshToken }),
@@ -87,7 +88,7 @@ export async function refreshAccessToken(
 }
 
 export async function logout(refreshToken: string): Promise<void> {
-  const res = await fetch("/api/auth/logout", {
+  const res = await fetch(`${getBackendBaseUrlSync()}/api/auth/logout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refreshToken }),
@@ -106,7 +107,7 @@ export async function logoutAll(): Promise<{ revokedCount: number }> {
 }
 
 export async function getAuthStatus(): Promise<AuthStatusResponse> {
-  const res = await fetch("/api/auth/status");
+  const res = await fetch(`${getBackendBaseUrlSync()}/api/auth/status`);
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
