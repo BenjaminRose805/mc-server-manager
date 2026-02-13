@@ -133,11 +133,7 @@ jobs:
         run: npx electron-builder --mac --publish never --project=packages/electron
         env:
           USE_SYSTEM_APP_BUILDER: 'true'
-          CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
