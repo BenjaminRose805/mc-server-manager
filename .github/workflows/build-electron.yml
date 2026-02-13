@@ -118,7 +118,7 @@ jobs:
           npm run build -w @mc-server-manager/electron
 
       - name: Package Electron app
-        run: npx electron-builder --mac --publish never --project=packages/electron
+        run: npx electron-builder --mac --publish never --project=packages/electron -c.mac.identity=null
         env:
           USE_SYSTEM_APP_BUILDER: 'true'
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
