@@ -103,6 +103,22 @@ function copyNativeAddon(name: string, parts: string[]): void {
 copyNativeAddon("better-sqlite3", ["package.json", "lib", "build"]);
 copyNativeAddon("argon2", ["package.json", "argon2.cjs", "prebuilds"]);
 
+const betterSqlite3Deps = ["bindings", "file-uri-to-path"];
+for (const dep of betterSqlite3Deps) {
+  const srcPaths = [
+    join(rootDir, "node_modules", "better-sqlite3", "node_modules", dep),
+    join(rootDir, "node_modules", dep),
+  ];
+  const src = srcPaths.find(existsSync);
+  if (!src) {
+    console.warn(`Warning: ${dep} not found, skipping`);
+    continue;
+  }
+  const dest = join(resNodeModules, dep);
+  rmSync(dest, { recursive: true, force: true });
+  cpSync(src, dest, { recursive: true });
+}
+
 const argon2Deps = ["@phc/format", "node-gyp-build"];
 for (const dep of argon2Deps) {
   const srcPaths = [
