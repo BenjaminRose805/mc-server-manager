@@ -10,6 +10,6 @@
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["src/preload.ts"],
+  "include": ["src/preload.cts"],
   "references": [{ "path": "../../shared" }]
 }
