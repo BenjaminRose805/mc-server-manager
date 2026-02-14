@@ -122,6 +122,9 @@
       "releaseType": "draft"
     },
     "asar": true,
+    "asarUnpack": [
+      "dist/preload.js"
+    ],
     "npmRebuild": true
   }
 }
