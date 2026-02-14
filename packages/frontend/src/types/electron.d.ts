@@ -12,6 +12,7 @@ export interface ElectronAPI {
   // Auth
   msAuthStart(): Promise<MSAuthDeviceCode>;
   msAuthPoll(): Promise<MSAuthStatus>;
+  msAuthCancel(): Promise<void>;
   msAuthRefresh(uuid: string): Promise<LauncherAccount>;
   getMcAccessToken(uuid: string): Promise<string>;
   removeAccount(uuid: string): Promise<void>;

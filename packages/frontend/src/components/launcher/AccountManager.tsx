@@ -54,7 +54,10 @@ export function AccountManager({
   const [authPhase, setAuthPhase] = useState<AuthPhase>("idle");
   const [deviceCode, setDeviceCode] = useState<MSAuthDeviceCode | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const expiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flowIdRef = useRef(0);
+  const intervalRef = useRef(5000);
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -71,11 +74,20 @@ export function AccountManager({
     fetchAccounts();
   }, [fetchAccounts]);
 
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
+  const clearTimers = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    if (expiryTimerRef.current) {
+      clearTimeout(expiryTimerRef.current);
+      expiryTimerRef.current = null;
+    }
   }, []);
+
+  useEffect(() => {
+    return clearTimers;
+  }, [clearTimers]);
 
   const startAuth = async () => {
     if (!isDesktop()) {
@@ -88,22 +100,47 @@ export function AccountManager({
 
     try {
       const code = await window.electronAPI!.msAuthStart();
+      const thisFlow = ++flowIdRef.current;
+      intervalRef.current = (code.interval ?? 5) * 1000;
+
       setDeviceCode(code);
       setAuthPhase("awaiting");
 
-      pollRef.current = setInterval(async () => {
+      expiryTimerRef.current = setTimeout(
+        () => {
+          if (flowIdRef.current !== thisFlow) return;
+          clearTimers();
+          setAuthPhase("error");
+          setAuthError("Code expired. Please try again.");
+        },
+        (code.expiresIn ?? 900) * 1000,
+      );
+
+      const poll = async () => {
+        if (flowIdRef.current !== thisFlow) return;
+
         try {
           const status = await window.electronAPI!.msAuthPoll();
+          if (flowIdRef.current !== thisFlow) return;
 
-          if (status.status === "complete" && status.account) {
-            if (pollRef.current) clearInterval(pollRef.current);
-            pollRef.current = null;
+          if (status.status === "pending") {
+            pollTimerRef.current = setTimeout(poll, intervalRef.current);
+          } else if (status.status === "slow_down") {
+            intervalRef.current += 5000;
+            pollTimerRef.current = setTimeout(poll, intervalRef.current);
+          } else if (status.status === "complete" && status.account) {
+            clearTimers();
 
-            await api.createLauncherAccount({
-              username: status.account.username,
-              uuid: status.account.uuid,
-              accountType: status.account.accountType,
-            });
+            try {
+              await api.createLauncherAccount({
+                username: status.account.username,
+                uuid: status.account.uuid,
+                accountType: status.account.accountType,
+              });
+            } catch {
+              // Non-fatal: tokens are saved on the Electron side.
+              // Account will be invisible until re-added, but no data loss.
+            }
 
             setAuthPhase("success");
             toast.success(`Signed in as ${status.account.username}`);
@@ -115,23 +152,23 @@ export function AccountManager({
               setDeviceCode(null);
             }, 2000);
           } else if (status.status === "expired") {
-            if (pollRef.current) clearInterval(pollRef.current);
-            pollRef.current = null;
+            clearTimers();
             setAuthPhase("error");
             setAuthError("Code expired. Please try again.");
           } else if (status.status === "error") {
-            if (pollRef.current) clearInterval(pollRef.current);
-            pollRef.current = null;
+            clearTimers();
             setAuthPhase("error");
             setAuthError(status.error ?? "Authentication failed");
           }
-        } catch {
-          if (pollRef.current) clearInterval(pollRef.current);
-          pollRef.current = null;
+        } catch (err) {
+          clearTimers();
           setAuthPhase("error");
-          setAuthError("Lost connection during authentication");
+          const msg = err instanceof Error ? err.message : "Unknown error";
+          setAuthError(msg);
         }
-      }, 5000);
+      };
+
+      poll();
     } catch {
       setAuthPhase("error");
       setAuthError("Failed to start authentication");
@@ -156,8 +193,11 @@ export function AccountManager({
   };
 
   const cancelAuth = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = null;
+    flowIdRef.current++;
+    clearTimers();
+    if (isDesktop()) {
+      window.electronAPI!.msAuthCancel().catch(() => {});
+    }
     setAuthPhase("idle");
     setDeviceCode(null);
     setAuthError(null);

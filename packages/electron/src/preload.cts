@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   msAuthStart: () => ipcRenderer.invoke("ms-auth-start"),
   msAuthPoll: () => ipcRenderer.invoke("ms-auth-poll"),
+  msAuthCancel: () => ipcRenderer.invoke("ms-auth-cancel"),
   msAuthRefresh: (uuid: string) =>
     ipcRenderer.invoke("ms-auth-refresh", { uuid }),
   getMcAccessToken: (uuid: string) =>

@@ -871,7 +871,7 @@ export interface MSAuthDeviceCode {
 }
 
 export interface MSAuthStatus {
-  status: "pending" | "complete" | "expired" | "error";
+  status: "pending" | "complete" | "expired" | "error" | "slow_down";
   account?: LauncherAccount;
   error?: string;
 }

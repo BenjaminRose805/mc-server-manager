@@ -46,27 +46,39 @@ export function isEncryptionAvailable(): boolean {
   return safeStorage.isEncryptionAvailable();
 }
 
-/** Encrypt and persist a secret. Requires `app.whenReady()`. */
 export function saveSecret(key: string, value: string): void {
-  const encrypted = safeStorage.encryptString(value);
-  const base64 = encrypted.toString("base64");
-
   const data = readStorageFile();
-  data[key] = base64;
+
+  if (safeStorage.isEncryptionAvailable()) {
+    const encrypted = safeStorage.encryptString(value);
+    data[key] = `enc:${encrypted.toString("base64")}`;
+  } else {
+    data[key] = `plain:${Buffer.from(value, "utf-8").toString("base64")}`;
+  }
+
   writeStorageFile(data);
 }
 
-/** Decrypt a stored secret. Returns `null` if missing or decryption fails. Requires `app.whenReady()`. */
 export function getSecret(key: string): string | null {
   const data = readStorageFile();
-  const base64 = data[key];
+  const stored = data[key];
 
-  if (base64 === undefined) {
+  if (stored === undefined) {
     return null;
   }
 
   try {
-    const buffer = Buffer.from(base64, "base64");
+    if (stored.startsWith("enc:")) {
+      const buffer = Buffer.from(stored.slice(4), "base64");
+      return safeStorage.decryptString(buffer);
+    }
+
+    if (stored.startsWith("plain:")) {
+      return Buffer.from(stored.slice(6), "base64").toString("utf-8");
+    }
+
+    // Legacy format (pre-prefix) — try encrypted decryption
+    const buffer = Buffer.from(stored, "base64");
     return safeStorage.decryptString(buffer);
   } catch (err) {
     console.warn(

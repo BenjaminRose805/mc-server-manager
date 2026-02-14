@@ -66,8 +66,6 @@ export async function launchGame(
     throw new Error("Game is already running for this instance");
   }
 
-  const mcToken = await getMcAccessToken(accountId);
-
   const instance = await fetchJson<LauncherInstance>(
     `${baseUrl()}/api/launcher/instances/${instanceId}`,
   );
@@ -79,6 +77,8 @@ export async function launchGame(
   if (!account) {
     throw new Error(`Account ${accountId} not found`);
   }
+
+  const mcToken = await getMcAccessToken(account.uuid);
 
   const prepareRes = await fetchJson<PrepareResponse>(
     `${baseUrl()}/api/launcher/prepare/${instanceId}`,

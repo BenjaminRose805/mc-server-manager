@@ -32,6 +32,11 @@ export function registerIpcHandlers(): void {
   );
 
   ipcMain.handle(
+    "ms-auth-cancel",
+    serializableHandler(() => auth.msAuthCancel()),
+  );
+
+  ipcMain.handle(
     "ms-auth-refresh",
     serializableHandler((args) => auth.msAuthRefresh(args.uuid as string)),
   );
