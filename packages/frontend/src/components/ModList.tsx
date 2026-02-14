@@ -20,6 +20,7 @@ import type {
 import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 import { useServerStore } from "@/stores/serverStore";
+import { logger } from "@/utils/logger";
 
 function SideBadge({ side }: { side: ModSide }) {
   if (side === "both" || side === "unknown") return null;
@@ -101,6 +102,8 @@ export function ModList({
         setModpacks(modpacksRes.modpacks);
       }
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.warn("Failed to load mods", { error: errorMsg });
       setError(err instanceof Error ? err.message : "Failed to load mods");
     } finally {
       setLoading(false);
@@ -122,6 +125,9 @@ export function ModList({
       setMods((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
       toast.success(`${mod.name} ${updated.enabled ? "enabled" : "disabled"}`);
     } catch (err) {
+      logger.warn("Failed to toggle mod", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(err instanceof Error ? err.message : "Failed to toggle mod");
     } finally {
       setTogglingIds((prev) => {
@@ -144,6 +150,9 @@ export function ModList({
       setMods((prev) => prev.filter((m) => m.id !== mod.id));
       toast.success(`${mod.name} uninstalled`);
     } catch (err) {
+      logger.warn("Failed to uninstall mod", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to uninstall mod",
       );
@@ -169,6 +178,9 @@ export function ModList({
         toast.info("Already on the latest version");
       }
     } catch (err) {
+      logger.warn("Failed to check for modpack updates", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to check for updates",
       );
@@ -194,6 +206,9 @@ export function ModList({
       });
       await fetchMods();
     } catch (err) {
+      logger.warn("Failed to update modpack", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to update modpack",
       );
@@ -224,6 +239,9 @@ export function ModList({
       URL.revokeObjectURL(url);
       toast.success("Modpack exported");
     } catch (err) {
+      logger.warn("Failed to export modpack", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to export modpack",
       );

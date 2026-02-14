@@ -1,4 +1,5 @@
 import type { CorsOptions } from "cors";
+import { logger } from "../utils/logger.js";
 
 function isAllowedOrigin(origin: string): boolean {
   const allowedOrigins: string[] = [];
@@ -14,7 +15,8 @@ function isAllowedOrigin(origin: string): boolean {
     if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
       return true;
     }
-  } catch {
+  } catch (err) {
+    logger.debug({ origin }, "CORS origin parse failed");
     return false;
   }
 

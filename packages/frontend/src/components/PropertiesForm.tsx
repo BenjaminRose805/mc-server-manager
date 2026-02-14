@@ -19,6 +19,7 @@ import { JVM_PRESETS } from "@mc-server-manager/shared";
 import { api } from "@/api/client";
 import { useServerStore } from "@/stores/serverStore";
 import { cn } from "@/lib/utils";
+import { logger } from "@/utils/logger";
 
 // ============================================================
 // PropertiesForm — main component
@@ -61,6 +62,11 @@ export function PropertiesForm({ server, className }: PropertiesFormProps) {
       setData(res);
       setFormProps({ ...res.properties });
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.warn("Failed to load server properties", {
+        error: errorMsg,
+        serverId: server.id,
+      });
       setError(
         err instanceof Error ? err.message : "Failed to load properties",
       );
@@ -146,6 +152,10 @@ export function PropertiesForm({ server, className }: PropertiesFormProps) {
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to save";
+      logger.warn("Failed to save server settings", {
+        error: msg,
+        serverId: server.id,
+      });
       setSaveError(msg);
       toast.error(`Failed to save settings: ${msg}`);
     } finally {

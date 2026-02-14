@@ -1,4 +1,5 @@
 import { getDb } from "../services/database.js";
+import { logger } from "../utils/logger.js";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_WINDOW_MINUTES = 15;
@@ -26,7 +27,11 @@ export function isLockedOut(username: string, ipAddress: string): boolean {
     )
     .get(username, ipAddress, cutoff) as { count: number } | undefined;
 
-  return result ? result.count >= MAX_FAILED_ATTEMPTS : false;
+  if (result && result.count >= MAX_FAILED_ATTEMPTS) {
+    logger.warn({ username, ipAddress }, "Login lockout triggered");
+    return true;
+  }
+  return false;
 }
 
 export function clearLoginAttempts(username: string): void {
@@ -45,5 +50,6 @@ export function cleanupOldAttempts(): number {
     )
     .run(cutoff) as { changes: number };
 
+  logger.info({ cleanedUp: result.changes }, "Old login attempts cleaned up");
   return result.changes;
 }

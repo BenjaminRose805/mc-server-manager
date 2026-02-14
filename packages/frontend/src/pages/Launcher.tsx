@@ -9,6 +9,7 @@ import type {
 import { api } from "@/api/client";
 import { InstanceGrid } from "@/components/launcher/InstanceGrid";
 import { CreateInstanceWizard } from "@/components/launcher/CreateInstanceWizard";
+import { logger } from "@/utils/logger";
 
 export default function Launcher() {
   const navigate = useNavigate();
@@ -22,6 +23,9 @@ export default function Launcher() {
       const data = await api.getLauncherInstances();
       setInstances(data);
     } catch (err) {
+      logger.warn("Failed to load instances", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to load instances",
       );
@@ -41,6 +45,9 @@ export default function Launcher() {
       setShowCreateWizard(false);
       fetchInstances();
     } catch (err) {
+      logger.warn("Failed to create instance", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to create instance",
       );
@@ -57,6 +64,9 @@ export default function Launcher() {
       toast.success("Instance deleted.");
       setInstances((prev) => prev.filter((i) => i.id !== id));
     } catch (err) {
+      logger.warn("Failed to delete instance", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to delete instance",
       );

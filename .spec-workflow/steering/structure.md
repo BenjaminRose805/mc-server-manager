@@ -43,6 +43,7 @@ mc-server-manager/
 │   │       │   ├── system.ts            # /api/system/* Java, info, settings
 │   │       │   ├── acme.ts              # /api/acme/* Let's Encrypt challenges
 │   │       │   ├── logs.ts              # /api/servers/:id/logs
+│   │       │   ├── client-logs.ts       # POST /api/log (frontend log ingestion)
 │   │       │   └── validation.ts        # Shared Zod schemas
 │   │       ├── services/        # Business logic singletons
 │   │       │   ├── server-manager.ts    # Core: ServerProcess orchestrator
@@ -88,7 +89,8 @@ mc-server-manager/
 │   │       │   ├── cors-config.ts       # CORS configuration
 │   │       │   └── security.ts          # Helmet security headers
 │   │       ├── utils/           # Utilities
-│   │       │   └── errors.ts            # AppError, NotFoundError, ConflictError, etc.
+│   │       │   ├── errors.ts            # AppError, NotFoundError, ConflictError, etc.
+│   │       │   └── logger.ts            # Pino logger (stdout + file via pino-roll)
 │   │       └── ws/              # WebSocket handlers
 │   │
 │   ├── frontend/                # React SPA
@@ -147,6 +149,7 @@ mc-server-manager/
 │   │       │   └── AuthContext.tsx       # Auth state, token refresh, login/logout
 │   │       ├── utils/           # Utility functions
 │   │       │   ├── desktop.ts           # isDesktop(), getBackendBaseUrl() (Electron detection)
+│   │       │   ├── logger.ts            # Browser logger (console + batch POST to /api/log)
 │   │       │   └── ...
 │   │       ├── types/           # Ambient type declarations
 │   │       │   └── electron.d.ts        # window.electronAPI interface
@@ -175,6 +178,9 @@ mc-server-manager/
 │
 ├── data/                        # Runtime data (gitignored)
 │   ├── mc-manager.db            # SQLite database
+│   ├── logs/                    # Application log files
+│   │   ├── app.log              # Current log (backend + frontend, JSON format)
+│   │   └── app.{1-7}.log       # Rotated daily, 7-day retention
 │   └── servers/                 # Individual MC server directories (nanoid-named)
 │
 ├── plans/                       # Architecture planning documents

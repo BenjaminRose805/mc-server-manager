@@ -11,11 +11,11 @@
  *  - Graceful stop via "stop" command, with SIGTERM/SIGKILL fallback
  */
 
-import { spawn, type ChildProcess } from 'node:child_process';
-import { EventEmitter } from 'node:events';
-import type { ServerStatus } from '@mc-server-manager/shared';
-import { ConsoleBuffer, type ConsoleLine } from './console-buffer.js';
-import { logger } from '../utils/logger.js';
+import { spawn, type ChildProcess } from "node:child_process";
+import { EventEmitter } from "node:events";
+import type { ServerStatus } from "@mc-server-manager/shared";
+import { ConsoleBuffer, type ConsoleLine } from "./console-buffer.js";
+import { logger } from "../utils/logger.js";
 
 // --- Regex patterns for parsing server output ---
 
@@ -43,7 +43,7 @@ const PLAYER_LEAVE_REGEX = /\]: (\S+) left the game$/;
 const DEFAULT_RUNNING_TIMEOUT_MS = 120_000;
 
 /** Default command sent to stdin for graceful stop. */
-const DEFAULT_STOP_COMMAND = 'stop';
+const DEFAULT_STOP_COMMAND = "stop";
 
 /** Grace period (ms) after sending stop command before we escalate to SIGTERM. */
 const GRACEFUL_STOP_TIMEOUT_MS = 30_000;
@@ -71,14 +71,23 @@ export interface ServerProcessEvents {
 }
 
 export declare interface ServerProcess {
-  on<K extends keyof ServerProcessEvents>(event: K, listener: ServerProcessEvents[K]): this;
-  off<K extends keyof ServerProcessEvents>(event: K, listener: ServerProcessEvents[K]): this;
-  emit<K extends keyof ServerProcessEvents>(event: K, ...args: Parameters<ServerProcessEvents[K]>): boolean;
+  on<K extends keyof ServerProcessEvents>(
+    event: K,
+    listener: ServerProcessEvents[K],
+  ): this;
+  off<K extends keyof ServerProcessEvents>(
+    event: K,
+    listener: ServerProcessEvents[K],
+  ): this;
+  emit<K extends keyof ServerProcessEvents>(
+    event: K,
+    ...args: Parameters<ServerProcessEvents[K]>
+  ): boolean;
 }
 
 export class ServerProcess extends EventEmitter {
   private proc: ChildProcess | null = null;
-  private _status: ServerStatus = 'stopped';
+  private _status: ServerStatus = "stopped";
   private _players = new Set<string>();
   private _startedAt: number | null = null;
   private consoleBuffer: ConsoleBuffer;
@@ -95,12 +104,13 @@ export class ServerProcess extends EventEmitter {
   constructor(
     public readonly serverId: string,
     bufferCapacity = 1000,
-    config?: Partial<ProcessConfig>
+    config?: Partial<ProcessConfig>,
   ) {
     super();
     this.consoleBuffer = new ConsoleBuffer(bufferCapacity);
     this.config = {
-      doneRegex: config?.doneRegex !== undefined ? config.doneRegex : DEFAULT_DONE_REGEX,
+      doneRegex:
+        config?.doneRegex !== undefined ? config.doneRegex : DEFAULT_DONE_REGEX,
       stopCommand: config?.stopCommand ?? DEFAULT_STOP_COMMAND,
       runningTimeoutMs: config?.runningTimeoutMs ?? DEFAULT_RUNNING_TIMEOUT_MS,
     };
@@ -134,7 +144,9 @@ export class ServerProcess extends EventEmitter {
   }
 
   get isAlive(): boolean {
-    return this.proc !== null && this.proc.exitCode === null && !this.proc.killed;
+    return (
+      this.proc !== null && this.proc.exitCode === null && !this.proc.killed
+    );
   }
 
   /**
@@ -153,65 +165,66 @@ export class ServerProcess extends EventEmitter {
    * @param cwd - Working directory for the process
    */
   start(javaPath: string, args: string[], cwd: string): void {
-    if (this._status !== 'stopped' && this._status !== 'crashed') {
-      throw new Error(`Cannot start server ${this.serverId}: current status is "${this._status}"`);
+    if (this._status !== "stopped" && this._status !== "crashed") {
+      throw new Error(
+        `Cannot start server ${this.serverId}: current status is "${this._status}"`,
+      );
     }
 
     this.intentionalStop = false;
     this._players.clear();
-    this.setStatus('starting');
+    this.setStatus("starting");
 
     logger.info(
       { serverId: this.serverId, javaPath, args, cwd },
-      'Starting Minecraft server process'
+      "Starting Minecraft server process",
     );
 
     this.proc = spawn(javaPath, args, {
       cwd,
-      stdio: ['pipe', 'pipe', 'pipe'],
+      stdio: ["pipe", "pipe", "pipe"],
     });
 
     // Handle stdout
-    this.proc.stdout?.on('data', (data: Buffer) => {
+    this.proc.stdout?.on("data", (data: Buffer) => {
       this.handleOutput(data.toString());
     });
 
     // Handle stderr (Minecraft writes some startup info to stderr)
-    this.proc.stderr?.on('data', (data: Buffer) => {
+    this.proc.stderr?.on("data", (data: Buffer) => {
       this.handleOutput(data.toString());
     });
 
     // Handle process exit
-    this.proc.on('exit', (code, signal) => {
+    this.proc.on("exit", (code, signal) => {
       logger.info(
         { serverId: this.serverId, code, signal },
-        'Server process exited'
+        "Server process exited",
       );
       this.handleExit(code, signal);
     });
 
     // Handle spawn error (e.g. java not found)
-    this.proc.on('error', (err) => {
-      logger.error(
-        { serverId: this.serverId, err },
-        'Server process error'
+    this.proc.on("error", (err) => {
+      logger.error({ serverId: this.serverId, err }, "Server process error");
+      const entry = this.consoleBuffer.push(
+        `[Manager] Process error: ${err.message}`,
       );
-      const entry = this.consoleBuffer.push(`[Manager] Process error: ${err.message}`);
-      this.emit('console', this.serverId, entry);
+      this.emit("console", this.serverId, entry);
       this.cleanupTimers();
       this.proc = null;
-      this.setStatus('crashed');
+      this.setStatus("crashed");
     });
 
     // Fallback: if we never see the "Done" line, assume running after timeout
     this.runningFallbackTimer = setTimeout(() => {
-      if (this._status === 'starting' && this.isAlive) {
+      if (this._status === "starting" && this.isAlive) {
         logger.warn(
           { serverId: this.serverId },
-          'Server did not emit "Done" line — assuming running via timeout fallback'
+          'Server did not emit "Done" line — assuming running via timeout fallback',
         );
         this._startedAt = Date.now();
-        this.setStatus('running');
+        this.setStatus("running");
       }
     }, this.config.runningTimeoutMs);
   }
@@ -221,29 +234,39 @@ export class ServerProcess extends EventEmitter {
    */
   sendCommand(command: string): void {
     if (!this.proc?.stdin?.writable) {
-      throw new Error(`Cannot send command to server ${this.serverId}: not running`);
+      throw new Error(
+        `Cannot send command to server ${this.serverId}: not running`,
+      );
     }
-    this.proc.stdin.write(command + '\n');
-    logger.debug({ serverId: this.serverId, command }, 'Sent command to server');
+    this.proc.stdin.write(command + "\n");
+    logger.debug(
+      { serverId: this.serverId, command },
+      "Sent command to server",
+    );
   }
 
   /**
    * Graceful stop: send "stop" command, wait for exit, then SIGTERM, then SIGKILL.
    */
   stop(): void {
-    if (this._status !== 'running' && this._status !== 'starting') {
-      throw new Error(`Cannot stop server ${this.serverId}: current status is "${this._status}"`);
+    if (this._status !== "running" && this._status !== "starting") {
+      throw new Error(
+        `Cannot stop server ${this.serverId}: current status is "${this._status}"`,
+      );
     }
 
     this.intentionalStop = true;
-    this.setStatus('stopping');
+    this.setStatus("stopping");
 
     // Try graceful stop via stdin
     try {
       this.sendCommand(this.config.stopCommand);
-    } catch {
+    } catch (err) {
       // stdin may already be closed — proceed to SIGTERM
-      logger.warn({ serverId: this.serverId }, 'Could not send stop command — escalating to SIGTERM');
+      logger.warn(
+        { err, serverId: this.serverId },
+        "Failed to write stop command to stdin — escalating to SIGTERM",
+      );
       this.escalateToSigterm();
       return;
     }
@@ -253,7 +276,7 @@ export class ServerProcess extends EventEmitter {
       if (this.isAlive) {
         logger.warn(
           { serverId: this.serverId },
-          'Graceful stop timed out — sending SIGTERM'
+          "Graceful stop timed out — sending SIGTERM",
         );
         this.escalateToSigterm();
       }
@@ -265,14 +288,16 @@ export class ServerProcess extends EventEmitter {
    */
   kill(): void {
     if (!this.proc || !this.isAlive) {
-      throw new Error(`Cannot kill server ${this.serverId}: no running process`);
+      throw new Error(
+        `Cannot kill server ${this.serverId}: no running process`,
+      );
     }
 
     this.intentionalStop = true;
     this.cleanupTimers();
 
-    logger.warn({ serverId: this.serverId }, 'Force-killing server process');
-    this.proc.kill('SIGKILL');
+    logger.warn({ serverId: this.serverId }, "Force-killing server process");
+    this.proc.kill("SIGKILL");
   }
 
   // --- Private helpers ---
@@ -280,8 +305,8 @@ export class ServerProcess extends EventEmitter {
   private setStatus(status: ServerStatus): void {
     if (this._status === status) return;
     this._status = status;
-    logger.info({ serverId: this.serverId, status }, 'Server status changed');
-    this.emit('status', this.serverId, status);
+    logger.info({ serverId: this.serverId, status }, "Server status changed");
+    this.emit("status", this.serverId, status);
   }
 
   /**
@@ -295,16 +320,20 @@ export class ServerProcess extends EventEmitter {
       if (line.length === 0) continue;
 
       const entry = this.consoleBuffer.push(line);
-      this.emit('console', this.serverId, entry);
+      this.emit("console", this.serverId, entry);
 
       // Detect "Done" → server is ready
-      if (this._status === 'starting' && this.config.doneRegex && this.config.doneRegex.test(line)) {
+      if (
+        this._status === "starting" &&
+        this.config.doneRegex &&
+        this.config.doneRegex.test(line)
+      ) {
         this._startedAt = Date.now();
         if (this.runningFallbackTimer) {
           clearTimeout(this.runningFallbackTimer);
           this.runningFallbackTimer = null;
         }
-        this.setStatus('running');
+        this.setStatus("running");
       }
 
       // Track player join/leave
@@ -317,8 +346,8 @@ export class ServerProcess extends EventEmitter {
     if (joinMatch) {
       const name = joinMatch[1];
       this._players.add(name);
-      logger.info({ serverId: this.serverId, player: name }, 'Player joined');
-      this.emit('players', this.serverId, this.players);
+      logger.info({ serverId: this.serverId, player: name }, "Player joined");
+      this.emit("players", this.serverId, this.players);
       return;
     }
 
@@ -326,8 +355,8 @@ export class ServerProcess extends EventEmitter {
     if (leaveMatch) {
       const name = leaveMatch[1];
       this._players.delete(name);
-      logger.info({ serverId: this.serverId, player: name }, 'Player left');
-      this.emit('players', this.serverId, this.players);
+      logger.info({ serverId: this.serverId, player: name }, "Player left");
+      this.emit("players", this.serverId, this.players);
     }
   }
 
@@ -336,31 +365,34 @@ export class ServerProcess extends EventEmitter {
     this.proc = null;
     this._players.clear();
 
-    if (this.intentionalStop || this._status === 'stopping') {
+    if (this.intentionalStop || this._status === "stopping") {
       // Intentional stop
       this._startedAt = null;
-      this.setStatus('stopped');
+      this.setStatus("stopped");
     } else {
       // Unexpected exit → crash
       this._startedAt = null;
       const entry = this.consoleBuffer.push(
-        `[Manager] Server crashed (exit code: ${code}, signal: ${signal})`
+        `[Manager] Server crashed (exit code: ${code}, signal: ${signal})`,
       );
-      this.emit('console', this.serverId, entry);
-      this.setStatus('crashed');
+      this.emit("console", this.serverId, entry);
+      this.setStatus("crashed");
     }
   }
 
   private escalateToSigterm(): void {
     if (!this.proc || !this.isAlive) return;
 
-    this.proc.kill('SIGTERM');
+    this.proc.kill("SIGTERM");
 
     // If SIGTERM doesn't work, SIGKILL after another timeout
     this.sigkillTimer = setTimeout(() => {
       if (this.isAlive) {
-        logger.warn({ serverId: this.serverId }, 'SIGTERM timed out — sending SIGKILL');
-        this.proc?.kill('SIGKILL');
+        logger.warn(
+          { serverId: this.serverId },
+          "SIGTERM timed out — sending SIGKILL",
+        );
+        this.proc?.kill("SIGKILL");
       }
     }, SIGTERM_TIMEOUT_MS);
   }

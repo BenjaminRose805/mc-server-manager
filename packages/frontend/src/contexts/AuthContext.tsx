@@ -12,6 +12,7 @@ import {
   logout as logoutApi,
   getAuthStatus,
 } from "@/api/auth";
+import { logger } from "@/utils/logger";
 
 interface User {
   id: string;
@@ -103,7 +104,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
           setAccessToken(response.accessToken);
           scheduleRefresh(response.accessToken);
-        } catch {
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          logger.warn("Token refresh failed", { error: errorMsg });
           clearAuth();
         }
       }, refreshIn * 1000);
@@ -136,7 +139,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (storedRefreshToken) {
       try {
         await logoutApi(storedRefreshToken);
-      } catch {}
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        logger.warn("Logout API call failed", { error: errorMsg });
+      }
     }
     clearAuth();
   }, [clearAuth]);
@@ -157,7 +163,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setIsLoading(false);
           return;
         }
-      } catch {
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        logger.debug("Auth status check failed", { error: errorMsg });
         // If status endpoint fails, proceed with token-based auth
       }
 
@@ -201,7 +209,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
             scheduleRefresh(response.accessToken);
           }
           setIsLoading(false);
-        } catch {
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          logger.warn("Initial token refresh failed", { error: errorMsg });
           clearAuth();
           setIsLoading(false);
         }

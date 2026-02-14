@@ -128,8 +128,11 @@ function findLegacyForgeJar(
         !f.includes("tmp"),
     );
     if (forgeJar) return path.join(serverDir, forgeJar);
-  } catch {
-    // ignore
+  } catch (err) {
+    logger.debug(
+      { err, serverDir },
+      "Failed to scan server directory for Forge JAR",
+    );
   }
 
   return null;
@@ -407,8 +410,11 @@ class ForgeProvider implements ServerProvider {
         installerPath.replace(".jar", ".jar.log"),
       );
       if (fs.existsSync(installerLog)) fs.unlinkSync(installerLog);
-    } catch {
-      // cleanup is non-fatal
+    } catch (err) {
+      logger.debug(
+        { err, destDir },
+        "Failed to clean up Forge installer log file",
+      );
     }
 
     job.progress = 100;

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { login as loginApi } from "@/api/auth";
 import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/utils/logger";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -31,6 +32,8 @@ export default function Login() {
       login(response);
       navigate("/");
     } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.warn("Login failed", { error: errorMsg });
       if (
         err &&
         typeof err === "object" &&

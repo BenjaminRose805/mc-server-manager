@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Play, Square, RotateCcw, Skull, Loader2, X } from 'lucide-react';
-import { toast } from 'sonner';
-import type { ServerStatus } from '@mc-server-manager/shared';
-import { api } from '@/api/client';
-import { cn } from '@/lib/utils';
+import { useState, useCallback, useEffect } from "react";
+import { Play, Square, RotateCcw, Skull, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
+import type { ServerStatus } from "@mc-server-manager/shared";
+import { api } from "@/api/client";
+import { cn } from "@/lib/utils";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // ServerControls — Start/Stop/Restart/Kill buttons with contextual states
@@ -15,23 +16,23 @@ interface ServerControlsProps {
   className?: string;
 }
 
-type ActionKind = 'start' | 'stop' | 'restart' | 'kill';
+type ActionKind = "start" | "stop" | "restart" | "kill";
 
 const ACTION_LABELS: Record<ActionKind, string> = {
-  start: 'Starting server...',
-  stop: 'Stopping server...',
-  restart: 'Restarting server...',
-  kill: 'Force killing server...',
+  start: "Starting server...",
+  stop: "Stopping server...",
+  restart: "Restarting server...",
+  kill: "Force killing server...",
 };
 
 /** Which actions are allowed in each status */
 const allowedActions: Record<ServerStatus, Set<ActionKind>> = {
-  stopped: new Set(['start']),
-  crashed: new Set(['start']),
-  running: new Set(['stop', 'restart', 'kill']),
-  starting: new Set(['kill']), // allow force-kill if stuck starting
-  stopping: new Set(['kill']), // allow force-kill if stuck stopping
-  provisioning: new Set([]),   // no actions during provisioning
+  stopped: new Set(["start"]),
+  crashed: new Set(["start"]),
+  running: new Set(["stop", "restart", "kill"]),
+  starting: new Set(["kill"]), // allow force-kill if stuck starting
+  stopping: new Set(["kill"]), // allow force-kill if stuck stopping
+  provisioning: new Set([]), // no actions during provisioning
 };
 
 export function ServerControls({
@@ -54,16 +55,16 @@ export function ServerControls({
       setLoading(action);
       try {
         switch (action) {
-          case 'start':
+          case "start":
             await api.startServer(serverId);
             break;
-          case 'stop':
+          case "stop":
             await api.stopServer(serverId);
             break;
-          case 'restart':
+          case "restart":
             await api.restartServer(serverId);
             break;
-          case 'kill':
+          case "kill":
             await api.killServer(serverId);
             break;
         }
@@ -71,6 +72,7 @@ export function ServerControls({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : `Failed to ${action} server`;
+        logger.warn(`Server ${action} failed`, { error: message, serverId });
         setError(message);
         toast.error(message);
       } finally {
@@ -82,18 +84,18 @@ export function ServerControls({
 
   const allowed = allowedActions[status];
 
-  const isTransitioning = status === 'starting' || status === 'stopping';
+  const isTransitioning = status === "starting" || status === "stopping";
 
   return (
-    <div className={cn('flex flex-col items-end gap-2', className)}>
+    <div className={cn("flex flex-col items-end gap-2", className)}>
       <div className="flex items-center gap-2">
         {/* Start */}
         <ControlButton
           label="Start"
           icon={Play}
-          onClick={() => perform('start')}
-          disabled={!allowed.has('start') || loading !== null}
-          loading={loading === 'start'}
+          onClick={() => perform("start")}
+          disabled={!allowed.has("start") || loading !== null}
+          loading={loading === "start"}
           variant="success"
         />
 
@@ -101,9 +103,9 @@ export function ServerControls({
         <ControlButton
           label="Stop"
           icon={Square}
-          onClick={() => perform('stop')}
-          disabled={!allowed.has('stop') || loading !== null}
-          loading={loading === 'stop'}
+          onClick={() => perform("stop")}
+          disabled={!allowed.has("stop") || loading !== null}
+          loading={loading === "stop"}
           variant="default"
         />
 
@@ -111,9 +113,9 @@ export function ServerControls({
         <ControlButton
           label="Restart"
           icon={RotateCcw}
-          onClick={() => perform('restart')}
-          disabled={!allowed.has('restart') || loading !== null}
-          loading={loading === 'restart'}
+          onClick={() => perform("restart")}
+          disabled={!allowed.has("restart") || loading !== null}
+          loading={loading === "restart"}
           variant="default"
         />
 
@@ -122,9 +124,9 @@ export function ServerControls({
           <ControlButton
             label="Kill"
             icon={Skull}
-            onClick={() => perform('kill')}
-            disabled={!allowed.has('kill') || loading === 'kill'}
-            loading={loading === 'kill'}
+            onClick={() => perform("kill")}
+            disabled={!allowed.has("kill") || loading === "kill"}
+            loading={loading === "kill"}
             variant="danger"
           />
         )}
@@ -150,26 +152,26 @@ export function ServerControls({
 // Internal button component
 // ---------------------------------------------------------------------------
 
-type Variant = 'default' | 'success' | 'danger';
+type Variant = "default" | "success" | "danger";
 
 const variantStyles: Record<
   Variant,
   { base: string; hover: string; active: string }
 > = {
   default: {
-    base: 'border-zinc-700 bg-zinc-800 text-zinc-300',
-    hover: 'hover:bg-zinc-700 hover:text-zinc-100',
-    active: 'active:bg-zinc-600',
+    base: "border-zinc-700 bg-zinc-800 text-zinc-300",
+    hover: "hover:bg-zinc-700 hover:text-zinc-100",
+    active: "active:bg-zinc-600",
   },
   success: {
-    base: 'border-emerald-600/50 bg-emerald-600/20 text-emerald-400',
-    hover: 'hover:bg-emerald-600/30 hover:text-emerald-300',
-    active: 'active:bg-emerald-600/40',
+    base: "border-emerald-600/50 bg-emerald-600/20 text-emerald-400",
+    hover: "hover:bg-emerald-600/30 hover:text-emerald-300",
+    active: "active:bg-emerald-600/40",
   },
   danger: {
-    base: 'border-red-600/50 bg-red-600/20 text-red-400',
-    hover: 'hover:bg-red-600/30 hover:text-red-300',
-    active: 'active:bg-red-600/40',
+    base: "border-red-600/50 bg-red-600/20 text-red-400",
+    hover: "hover:bg-red-600/30 hover:text-red-300",
+    active: "active:bg-red-600/40",
   },
 };
 
@@ -198,11 +200,11 @@ function ControlButton({
       disabled={disabled}
       title={label}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
+        "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
         styles.base,
         !disabled && styles.hover,
         !disabled && styles.active,
-        disabled && 'opacity-40 cursor-not-allowed',
+        disabled && "opacity-40 cursor-not-allowed",
       )}
     >
       {loading ? (

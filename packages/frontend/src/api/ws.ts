@@ -3,6 +3,7 @@ import type {
   WsServerMessage,
 } from "@mc-server-manager/shared";
 import { isDesktop, getBackendBaseUrlSync } from "../utils/desktop";
+import { logger } from "@/utils/logger";
 
 type MessageHandler = (msg: WsServerMessage) => void;
 type ConnectionHandler = () => void;
@@ -70,8 +71,10 @@ class WsClient {
       try {
         const msg = JSON.parse(event.data as string) as WsServerMessage;
         for (const h of this.messageHandlers) h(msg);
-      } catch {
-        // ignore unparseable messages
+      } catch (err) {
+        logger.warn("Failed to parse WebSocket message", {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     };
 
@@ -84,6 +87,7 @@ class WsClient {
     };
 
     this.ws.onerror = () => {
+      logger.warn("WebSocket connection error");
       // onclose will fire after onerror, so reconnect logic is there
     };
   }
@@ -136,6 +140,9 @@ class WsClient {
 
   private scheduleReconnect(): void {
     if (this.reconnectTimeout) return;
+    logger.debug("WebSocket scheduling reconnect", {
+      delayMs: this.reconnectDelay,
+    });
     this.reconnectTimeout = setTimeout(() => {
       this.reconnectTimeout = null;
       this.connect();

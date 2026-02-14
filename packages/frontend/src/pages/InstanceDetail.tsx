@@ -24,6 +24,7 @@ import { AccountManager } from "@/components/launcher/AccountManager";
 import { DownloadProgress } from "@/components/launcher/DownloadProgress";
 import { isDesktop } from "@/utils/desktop";
 import { cn } from "@/lib/utils";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Tab definitions
@@ -72,7 +73,12 @@ function LoaderSetup({
         else if (res.versions.length > 0)
           setSelectedVersion(res.versions[0].version);
       })
-      .catch(() => toast.error("Failed to load Fabric versions"))
+      .catch((err) => {
+        logger.warn("Failed to load Fabric versions", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        toast.error("Failed to load Fabric versions");
+      })
       .finally(() => setLoadingVersions(false));
   }, [instanceId, mcVersion]);
 
@@ -87,6 +93,9 @@ function LoaderSetup({
       toast.success("Fabric installed successfully");
       onInstalled();
     } catch (err) {
+      logger.warn("Failed to install Fabric", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to install Fabric",
       );
@@ -236,6 +245,9 @@ function SettingsForm({
       toast.success("Settings saved");
       onSaved();
     } catch (err) {
+      logger.warn("Failed to save instance settings", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to save settings",
       );
@@ -441,6 +453,11 @@ export default function InstanceDetail() {
       .getLauncherInstance(id)
       .then(setInstance)
       .catch((err) => {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        logger.error("Failed to load instance", {
+          error: errorMsg,
+          instanceId: id,
+        });
         if (err.status === 404) {
           setNotFound(true);
         } else {
@@ -464,6 +481,9 @@ export default function InstanceDetail() {
       toast.success("Mod loader removed");
       fetchInstance();
     } catch (err) {
+      logger.warn("Failed to remove loader", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to remove loader",
       );
@@ -490,6 +510,7 @@ export default function InstanceDetail() {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to launch";
+      logger.warn("Failed to launch game", { error: message });
       toast.error(message);
     } finally {
       setPreparing(false);

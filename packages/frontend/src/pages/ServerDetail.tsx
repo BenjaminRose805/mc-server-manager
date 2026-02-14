@@ -23,6 +23,7 @@ import { LogViewer } from "@/components/LogViewer";
 import { ModList } from "@/components/ModList";
 import { DeleteServerDialog } from "@/components/DeleteServerDialog";
 import { cn } from "@/lib/utils";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Tab definitions
@@ -127,6 +128,11 @@ export function ServerDetail() {
       .getServer(id)
       .then(setServer)
       .catch((err) => {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        logger.error("Failed to load server", {
+          error: errorMsg,
+          serverId: id,
+        });
         if (err.status === 404) {
           setNotFound(true);
         } else {
@@ -150,6 +156,11 @@ export function ServerDetail() {
         // Double-check: try to re-fetch
         if (id) {
           api.getServer(id).catch((err) => {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            logger.warn("Server re-fetch failed", {
+              error: errorMsg,
+              serverId: id,
+            });
             if (err.status === 404) {
               toast.error("This server has been deleted");
               navigate("/", { replace: true });

@@ -23,6 +23,7 @@ import type {
 } from "@mc-server-manager/shared";
 import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Settings page skeleton
@@ -83,6 +84,8 @@ export function AppSettings() {
       setJavaInfo(j);
       setSystemInfo(sys);
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.warn("Failed to load settings", { error: errorMsg });
       setError(err instanceof Error ? err.message : "Failed to load settings");
     } finally {
       setLoading(false);
@@ -115,6 +118,7 @@ export function AppSettings() {
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to save settings";
+      logger.warn("Failed to save settings", { error: msg });
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -137,7 +141,10 @@ export function AppSettings() {
     try {
       const info = await api.getJavaInfo(path);
       setJavaValidation(info);
-    } catch {
+    } catch (err) {
+      logger.warn("Java path validation failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       setJavaValidation({ found: false, path: null, version: null });
     } finally {
       setValidatingJava(false);

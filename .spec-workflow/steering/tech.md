@@ -19,7 +19,8 @@ Self-hosted web + desktop application. Monorepo with 4 npm workspace packages: b
 | ws | 8.x | WebSocket server (single endpoint: `/ws`) |
 | better-sqlite3 | 12.x | SQLite database (synchronous API, WAL mode) |
 | Zod | 3.x | Request validation (all route handlers) |
-| Pino | 9.x | Structured logging |
+| Pino | 9.x | Structured logging (stdout + file via pino-roll) |
+| pino-roll | 0.2.x | Log file rotation (daily, 7-file retention) |
 | nanoid | 5.x | ID generation |
 | argon2 | 0.44.x | Password hashing (argon2id) |
 | jsonwebtoken | 9.x | JWT access tokens (HS256, 15min expiry) |
@@ -134,6 +135,7 @@ User clicks "Sign In"
 ## Data Storage
 
 - **Primary**: SQLite via better-sqlite3 (file: `data/mc-manager.db`)
+- **Logs**: Pino JSON logs in `data/logs/app.log` (daily rotation, 7-day retention via pino-roll). Frontend logs are shipped to the same file via `POST /api/log`.
 - **Mode**: WAL (Write-Ahead Logging) for concurrent read/write
 - **Migrations**: 9 numbered SQL files in `packages/backend/migrations/` (001-009)
   - 001: servers table
@@ -209,5 +211,5 @@ npm run build -w shared        # Must build first (TypeScript project references
 - **Single-node only**: The app assumes one machine. No clustering, no distributed state.
 - **SQLite concurrency**: WAL mode helps but won't scale to hundreds of concurrent writers.
 - **No hot reload for Electron**: Changes to main process require restart.
-- **Console buffer is volatile**: 1000-line ring buffer is lost on server restart. No persistent logging.
+- **Console buffer is volatile**: 1000-line ring buffer is lost on server restart. Application logs persist to `data/logs/` but MC server console output is not persisted beyond the ring buffer.
 - **No code linting or formatting**: No ESLint/Prettier configured. Consistency relies on convention and AI agents following AGENTS.md.

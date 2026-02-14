@@ -102,8 +102,8 @@ async function probeJava(javaPath: string): Promise<JavaInfo | null> {
         version,
       };
     }
-  } catch {
-    // Binary not found or not executable — ignore
+  } catch (err) {
+    logger.debug({ err, path: javaPath }, "Java probe failed");
   }
   return null;
 }
@@ -119,8 +119,8 @@ async function findJavaOnPath(): Promise<string | null> {
     if (resolved && fs.existsSync(resolved)) {
       return resolved;
     }
-  } catch {
-    // 'which' returns non-zero if not found
+  } catch (err) {
+    logger.debug({ err }, "Java not found on PATH via which/where");
   }
   return null;
 }
@@ -227,7 +227,8 @@ async function probeJavaInstallation(
       vendor: parseJavaVendor(stderr),
       fullVersion,
     };
-  } catch {
+  } catch (err) {
+    logger.debug({ err, path: javaPath }, "Java installation probe failed");
     return null;
   }
 }
@@ -263,7 +264,8 @@ function discoverJavaBinsInDir(dir: string): string[] {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    logger.debug({ err, dir }, "Failed to read Java search directory");
     return results;
   }
 
@@ -298,7 +300,11 @@ export async function detectAllJavaInstallations(
     let canonical: string;
     try {
       canonical = fs.realpathSync(javaBin);
-    } catch {
+    } catch (err) {
+      logger.debug(
+        { err, path: javaBin },
+        "Failed to resolve realpath for Java binary",
+      );
       canonical = javaBin;
     }
     if (seenPaths.has(canonical)) return;
@@ -352,8 +358,11 @@ export async function detectAllJavaInstallations(
             await tryAdd(bin);
           }
         }
-      } catch {
-        // read errors on runtime dir are non-fatal
+      } catch (err) {
+        logger.debug(
+          { err, runtimeDir },
+          "Failed to read launcher runtime directory",
+        );
       }
     }
   }
@@ -372,7 +381,11 @@ function findJavaBinaryInDir(dir: string): string | null {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    logger.debug(
+      { err, dir },
+      "Failed to read directory while searching for Java binary",
+    );
     return null;
   }
 
@@ -476,8 +489,8 @@ export async function downloadJava(
     if (!isWindows) {
       try {
         fs.chmodSync(javaBinary, 0o755);
-      } catch {
-        /* ignore */
+      } catch (err) {
+        logger.debug({ err, path: javaBinary }, "Failed to chmod Java binary");
       }
     }
 
@@ -496,8 +509,11 @@ export async function downloadJava(
   } finally {
     try {
       fs.unlinkSync(tmpFile);
-    } catch {
-      /* ignore */
+    } catch (err) {
+      logger.debug(
+        { err, tmpFile },
+        "Failed to clean up temporary download file",
+      );
     }
   }
 }

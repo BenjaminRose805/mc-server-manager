@@ -1,5 +1,6 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertTriangle, RotateCcw } from 'lucide-react';
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import { AlertTriangle, RotateCcw } from "lucide-react";
+import { logger } from "@/utils/logger";
 
 interface Props {
   children: ReactNode;
@@ -21,7 +22,12 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[ErrorBoundary] Uncaught error:', error, info.componentStack);
+    logger.error("Uncaught React error", {
+      error: error.message,
+      stack: error.stack,
+      componentStack: info.componentStack,
+      url: window.location.pathname,
+    });
   }
 
   handleReset = () => {

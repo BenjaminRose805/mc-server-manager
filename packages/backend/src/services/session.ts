@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { nanoid } from "nanoid";
 import type { Session } from "@mc-server-manager/shared";
 import { getDb } from "../services/database.js";
+import { logger } from "../utils/logger.js";
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
 
@@ -56,6 +57,8 @@ export function createSession(
   `,
   ).run(id, userId, refreshTokenHash, deviceInfo, ipAddress, expiresAt);
 
+  logger.info({ userId, sessionId: id }, "Session created");
+
   const row = db
     .prepare("SELECT * FROM sessions WHERE id = ?")
     .get(id) as SessionRow;
@@ -99,6 +102,7 @@ export function validateRefreshToken(
 export function revokeSession(sessionId: string): void {
   const db = getDb();
   db.prepare("DELETE FROM sessions WHERE id = ?").run(sessionId);
+  logger.info({ sessionId }, "Session revoked");
 }
 
 export function revokeAllUserSessions(userId: string): number {
@@ -106,6 +110,10 @@ export function revokeAllUserSessions(userId: string): number {
   const result = db
     .prepare("DELETE FROM sessions WHERE user_id = ?")
     .run(userId);
+  logger.info(
+    { userId, revokedCount: result.changes },
+    "All user sessions revoked",
+  );
   return result.changes;
 }
 
@@ -119,5 +127,6 @@ export function cleanupExpiredSessions(): number {
   `,
     )
     .run();
+  logger.info({ cleanedUp: result.changes }, "Expired sessions cleaned up");
   return result.changes;
 }

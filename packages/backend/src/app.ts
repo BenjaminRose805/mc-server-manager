@@ -13,12 +13,13 @@ import { modpacksRouter, serverModpacksRouter } from "./routes/modpacks.js";
 import { launcherRouter } from "./routes/launcher.js";
 import { instanceModsRouter } from "./routes/instance-mods.js";
 import { acmeRouter } from "./routes/acme.js";
+import { clientLogsRouter } from "./routes/client-logs.js";
 import { authRouter } from "./routes/auth.js";
 import { usersRouter } from "./routes/users.js";
 import { invitationsRouter } from "./routes/invitations.js";
 import { helmetConfig } from "./middleware/security.js";
 import { corsOptions } from "./middleware/cors-config.js";
-import { apiRateLimit, authRateLimit } from "./middleware/rate-limit.js";
+import { authRateLimit } from "./middleware/rate-limit.js";
 import { AppError } from "./utils/errors.js";
 import { logger } from "./utils/logger.js";
 
@@ -32,9 +33,10 @@ app.use(helmetConfig);
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Rate limiting
-app.use("/api", apiRateLimit);
+// Rate limiting (auth only — brute-force protection on login)
 app.use("/api/auth", authRateLimit);
+
+app.use("/api/log", clientLogsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -80,11 +82,21 @@ if (process.env.NODE_ENV === "production") {
 app.use(
   (
     err: unknown,
-    _req: express.Request,
+    req: express.Request,
     res: express.Response,
     _next: express.NextFunction,
   ) => {
     if (err instanceof AppError) {
+      logger.warn(
+        {
+          statusCode: err.statusCode,
+          code: err.code,
+          method: req.method,
+          path: req.path,
+          userId: req.user?.id,
+        },
+        err.message,
+      );
       res.status(err.statusCode).json({
         error: err.message,
         code: err.code,
@@ -93,7 +105,16 @@ app.use(
     }
 
     // Unexpected errors
-    logger.error({ err }, "Unhandled error");
+    logger.error(
+      {
+        err,
+        method: req.method,
+        path: req.path,
+        query: req.query,
+        userId: req.user?.id,
+      },
+      "Unhandled error",
+    );
     res.status(500).json({
       error: "Internal server error",
       code: "INTERNAL_ERROR",

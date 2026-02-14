@@ -365,8 +365,11 @@ class NeoForgeProvider implements ServerProvider {
         installerPath.replace(".jar", ".jar.log"),
       );
       if (fs.existsSync(installerLog)) fs.unlinkSync(installerLog);
-    } catch {
-      // cleanup is non-fatal
+    } catch (err) {
+      logger.debug(
+        { err, destDir },
+        "Failed to clean up NeoForge installer log file",
+      );
     }
 
     job.progress = 100;

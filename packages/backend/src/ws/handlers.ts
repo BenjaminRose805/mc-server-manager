@@ -69,6 +69,7 @@ export function sendMessage(ws: WebSocket, message: unknown): void {
 export function initAuth(ws: WebSocket): void {
   const timeout = setTimeout(() => {
     if (!authenticatedClients.has(ws)) {
+      logger.warn("WebSocket auth timeout — closing connection");
       ws.close(4001, "Auth timeout");
     }
   }, 5_000);
@@ -86,6 +87,10 @@ export function handleMessage(ws: WebSocket, raw: string): void {
   try {
     msg = JSON.parse(raw) as Record<string, unknown>;
   } catch {
+    logger.warn(
+      { raw: String(raw).slice(0, 200) },
+      "Failed to parse WebSocket message as JSON",
+    );
     sendMessage(ws, {
       type: "error",
       message: "Invalid JSON",
@@ -112,6 +117,7 @@ export function handleMessage(ws: WebSocket, raw: string): void {
 
     const payload = verifyAccessToken(msg.token as string);
     if (!payload) {
+      logger.warn("WebSocket auth failed: invalid or expired token");
       sendMessage(ws, {
         type: "error",
         message: "Invalid or expired token",
@@ -126,6 +132,10 @@ export function handleMessage(ws: WebSocket, raw: string): void {
       username: payload.username,
       role: payload.role,
     });
+    logger.info(
+      { userId: payload.sub, username: payload.username },
+      "WebSocket client authenticated",
+    );
     sendMessage(ws, { type: "auth:ok" });
     return;
   }
@@ -166,6 +176,13 @@ export function handleMessage(ws: WebSocket, raw: string): void {
  * Clean up subscriptions and auth state when a client disconnects.
  */
 export function handleDisconnect(ws: WebSocket): void {
+  const user = authenticatedClients.get(ws);
+  const subs = clientSubscriptions.get(ws);
+  logger.debug(
+    { userId: user?.id, subscriptionCount: subs?.size ?? 0 },
+    "WebSocket client disconnected",
+  );
+
   const timeout = authTimeouts.get(ws);
   if (timeout) {
     clearTimeout(timeout);

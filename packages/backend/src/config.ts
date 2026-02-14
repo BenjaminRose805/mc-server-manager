@@ -20,6 +20,7 @@ export const config = {
   dataDir,
   serversDir: process.env.SERVERS_DIR ?? path.join(dataDir, "servers"),
   dbPath: process.env.DB_PATH ?? path.join(dataDir, "mc-manager.db"),
+  logsDir: process.env.LOGS_DIR ?? path.join(dataDir, "logs"),
   logLevel: process.env.LOG_LEVEL ?? "info",
   tls: {
     mode:

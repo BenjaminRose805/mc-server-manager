@@ -4,6 +4,7 @@ import { verifyAccessToken } from "../services/jwt.js";
 import { getPermission } from "../models/server-permission.js";
 import { countUsers } from "../models/user.js";
 import { UnauthorizedError, ForbiddenError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 declare global {
   namespace Express {
@@ -57,12 +58,20 @@ export function requireAuth(
       typeof header !== "string" ||
       !header.startsWith("Bearer ")
     ) {
+      logger.warn(
+        { path: req.path, method: req.method },
+        "Missing or malformed Authorization header",
+      );
       throw new UnauthorizedError("Missing or malformed Authorization header");
     }
 
     const token = header.slice(7);
     const payload = verifyAccessToken(token);
     if (!payload) {
+      logger.warn(
+        { path: req.path, method: req.method },
+        "Invalid or expired access token",
+      );
       throw new UnauthorizedError("Invalid or expired access token");
     }
 
@@ -89,6 +98,15 @@ export function requireRole(...roles: UserRole[]) {
         throw new UnauthorizedError();
       }
       if (!roles.includes(req.user.role)) {
+        logger.warn(
+          {
+            path: req.path,
+            userId: req.user?.id,
+            role: req.user?.role,
+            requiredRoles: roles,
+          },
+          "Insufficient role",
+        );
         throw new ForbiddenError(`Required role: ${roles.join(" or ")}`);
       }
       next();
@@ -168,6 +186,10 @@ export function requireServerPermission(permission: PermissionFlag) {
       const key = permissionKeyMap[permission];
 
       if (!record || !record[key]) {
+        logger.warn(
+          { path: req.path, userId: req.user?.id, serverId, permission },
+          "Server permission denied",
+        );
         throw new ForbiddenError();
       }
 

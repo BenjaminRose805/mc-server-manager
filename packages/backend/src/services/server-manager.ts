@@ -13,14 +13,18 @@
  *  - Enriching Server records with runtime status
  */
 
-import net from 'node:net';
-import type { Server, ServerStatus, ServerWithStatus } from '@mc-server-manager/shared';
-import { getServerById } from '../models/server.js';
-import { ServerProcess, type ProcessConfig } from './process.js';
-import type { ConsoleLine } from './console-buffer.js';
-import { getProvider } from '../providers/registry.js';
-import { logger } from '../utils/logger.js';
-import { AppError } from '../utils/errors.js';
+import net from "node:net";
+import type {
+  Server,
+  ServerStatus,
+  ServerWithStatus,
+} from "@mc-server-manager/shared";
+import { getServerById } from "../models/server.js";
+import { ServerProcess, type ProcessConfig } from "./process.js";
+import type { ConsoleLine } from "./console-buffer.js";
+import { getProvider } from "../providers/registry.js";
+import { logger } from "../utils/logger.js";
+import { AppError } from "../utils/errors.js";
 
 class ServerManager {
   /** Active processes keyed by server ID. */
@@ -33,9 +37,15 @@ class ServerManager {
    * Listeners registered via onConsole/onStatus/onPlayers.
    * Step 5 (WebSocket) will register listeners here to broadcast events.
    */
-  private consoleListeners: Array<(serverId: string, entry: ConsoleLine) => void> = [];
-  private statusListeners: Array<(serverId: string, status: ServerStatus) => void> = [];
-  private playersListeners: Array<(serverId: string, players: string[]) => void> = [];
+  private consoleListeners: Array<
+    (serverId: string, entry: ConsoleLine) => void
+  > = [];
+  private statusListeners: Array<
+    (serverId: string, status: ServerStatus) => void
+  > = [];
+  private playersListeners: Array<
+    (serverId: string, players: string[]) => void
+  > = [];
 
   // --- Event registration for external consumers (WebSocket layer) ---
 
@@ -62,9 +72,9 @@ class ServerManager {
     // Broadcast the provisioning status change
     for (const listener of this.statusListeners) {
       try {
-        listener(serverId, 'provisioning');
+        listener(serverId, "provisioning");
       } catch (err) {
-        logger.error({ err }, 'Error in status listener');
+        logger.error({ err }, "Error in status listener");
       }
     }
   }
@@ -76,12 +86,12 @@ class ServerManager {
     this.provisioningServers.delete(serverId);
     // Broadcast stopped status (the server is now idle, ready to start)
     const proc = this.processes.get(serverId);
-    const status = proc?.status ?? 'stopped';
+    const status = proc?.status ?? "stopped";
     for (const listener of this.statusListeners) {
       try {
         listener(serverId, status);
       } catch (err) {
-        logger.error({ err }, 'Error in status listener');
+        logger.error({ err }, "Error in status listener");
       }
     }
   }
@@ -107,8 +117,8 @@ class ServerManager {
    * Provisioning status takes priority over process status.
    */
   getStatus(serverId: string): ServerStatus {
-    if (this.provisioningServers.has(serverId)) return 'provisioning';
-    return this.processes.get(serverId)?.status ?? 'stopped';
+    if (this.provisioningServers.has(serverId)) return "provisioning";
+    return this.processes.get(serverId)?.status ?? "stopped";
   }
 
   /**
@@ -141,9 +151,9 @@ class ServerManager {
     // Block if provisioning
     if (this.provisioningServers.has(serverId)) {
       throw new AppError(
-        'Server is currently being provisioned (downloading/installing). Please wait.',
+        "Server is currently being provisioned (downloading/installing). Please wait.",
         409,
-        'PROVISIONING'
+        "PROVISIONING",
       );
     }
 
@@ -151,8 +161,15 @@ class ServerManager {
     const existing = this.processes.get(serverId);
 
     // If there's already an active process, check its state
-    if (existing && (existing.status === 'running' || existing.status === 'starting')) {
-      throw new AppError(`Server "${server.name}" is already ${existing.status}`, 409, 'ALREADY_RUNNING');
+    if (
+      existing &&
+      (existing.status === "running" || existing.status === "starting")
+    ) {
+      throw new AppError(
+        `Server "${server.name}" is already ${existing.status}`,
+        409,
+        "ALREADY_RUNNING",
+      );
     }
 
     // Get the provider for this server type
@@ -161,7 +178,7 @@ class ServerManager {
     // Provider-level validation (JAR exists, directory exists, etc.)
     const validationError = provider.validateInstallation(server);
     if (validationError) {
-      throw new AppError(validationError, 400, 'INVALID_INSTALLATION');
+      throw new AppError(validationError, 400, "INVALID_INSTALLATION");
     }
 
     // Check for OS-level port conflict
@@ -170,7 +187,7 @@ class ServerManager {
       throw new AppError(
         `Port ${server.port} is already in use on this system`,
         409,
-        'PORT_IN_USE'
+        "PORT_IN_USE",
       );
     }
 
@@ -191,7 +208,7 @@ class ServerManager {
 
     // Create (or reuse) the ServerProcess
     let proc = this.processes.get(serverId);
-    if (!proc || proc.status === 'crashed' || proc.status === 'stopped') {
+    if (!proc || proc.status === "crashed" || proc.status === "stopped") {
       proc = new ServerProcess(serverId, 1000, processConfig);
       this.wireProcessEvents(proc);
       this.processes.set(serverId, proc);
@@ -208,20 +225,20 @@ class ServerManager {
   stop(serverId: string): ServerWithStatus {
     if (this.provisioningServers.has(serverId)) {
       throw new AppError(
-        'Server is currently being provisioned. Cannot stop.',
+        "Server is currently being provisioned. Cannot stop.",
         409,
-        'PROVISIONING'
+        "PROVISIONING",
       );
     }
 
     const server = getServerById(serverId);
     const proc = this.processes.get(serverId);
 
-    if (!proc || (proc.status !== 'running' && proc.status !== 'starting')) {
+    if (!proc || (proc.status !== "running" && proc.status !== "starting")) {
       throw new AppError(
         `Server "${server.name}" is not running`,
         409,
-        'NOT_RUNNING'
+        "NOT_RUNNING",
       );
     }
 
@@ -236,23 +253,23 @@ class ServerManager {
     const server = getServerById(serverId);
     const proc = this.processes.get(serverId);
 
-    if (proc && (proc.status === 'running' || proc.status === 'starting')) {
+    if (proc && (proc.status === "running" || proc.status === "starting")) {
       // Stop first, then start when stopped
       proc.stop();
 
       // Wait for the process to actually stop
       await new Promise<void>((resolve) => {
         const onStatus = (_id: string, status: ServerStatus) => {
-          if (status === 'stopped' || status === 'crashed') {
-            proc.off('status', onStatus);
+          if (status === "stopped" || status === "crashed") {
+            proc.off("status", onStatus);
             resolve();
           }
         };
-        proc.on('status', onStatus);
+        proc.on("status", onStatus);
 
         // Safety timeout — don't wait forever
         setTimeout(() => {
-          proc.off('status', onStatus);
+          proc.off("status", onStatus);
           resolve();
         }, GRACEFUL_STOP_TIMEOUT_MS + 15_000);
       });
@@ -272,7 +289,7 @@ class ServerManager {
       throw new AppError(
         `Server "${server.name}" has no active process to kill`,
         409,
-        'NOT_RUNNING'
+        "NOT_RUNNING",
       );
     }
 
@@ -285,11 +302,11 @@ class ServerManager {
    */
   sendCommand(serverId: string, command: string): void {
     const proc = this.processes.get(serverId);
-    if (!proc || proc.status !== 'running') {
+    if (!proc || proc.status !== "running") {
       throw new AppError(
         `Server ${serverId} is not running — cannot send command`,
         409,
-        'NOT_RUNNING'
+        "NOT_RUNNING",
       );
     }
     proc.sendCommand(command);
@@ -304,41 +321,55 @@ class ServerManager {
    */
   async shutdownAll(): Promise<void> {
     const running = [...this.processes.entries()].filter(
-      ([, proc]) => proc.status === 'running' || proc.status === 'starting'
+      ([, proc]) => proc.status === "running" || proc.status === "starting",
     );
 
     if (running.length === 0) {
-      logger.info('No running servers to shut down');
+      logger.info("No running servers to shut down");
       return;
     }
 
-    logger.info({ count: running.length }, 'Shutting down all running servers...');
+    logger.info(
+      { count: running.length },
+      "Shutting down all running servers...",
+    );
 
     const stopPromises = running.map(([id, proc]) => {
       return new Promise<void>((resolve) => {
         const onStatus = (_serverId: string, status: ServerStatus) => {
-          if (status === 'stopped' || status === 'crashed') {
-            proc.off('status', onStatus);
+          if (status === "stopped" || status === "crashed") {
+            proc.off("status", onStatus);
             resolve();
           }
         };
-        proc.on('status', onStatus);
+        proc.on("status", onStatus);
 
         try {
           proc.stop();
-        } catch {
-          // Already stopping or not running
+        } catch (err) {
+          logger.warn(
+            { err, serverId: id },
+            "Error during graceful server stop",
+          );
           resolve();
         }
 
         // Safety timeout per server
         setTimeout(() => {
-          proc.off('status', onStatus);
+          proc.off("status", onStatus);
           if (proc.isAlive) {
-            logger.warn({ serverId: id }, 'Force-killing server during shutdown');
+            logger.warn(
+              { serverId: id },
+              "Force-killing server during shutdown",
+            );
             try {
               proc.kill();
-            } catch { /* already dead */ }
+            } catch (err) {
+              logger.debug(
+                { err, serverId: id },
+                "Force-kill failed — process likely already dead",
+              );
+            }
           }
           resolve();
         }, 45_000);
@@ -346,7 +377,7 @@ class ServerManager {
     });
 
     await Promise.all(stopPromises);
-    logger.info('All servers shut down');
+    logger.info("All servers shut down");
   }
 
   // --- Internal helpers ---
@@ -355,32 +386,32 @@ class ServerManager {
    * Wire up a ServerProcess's events to our broadcast system.
    */
   private wireProcessEvents(proc: ServerProcess): void {
-    proc.on('console', (serverId, entry) => {
+    proc.on("console", (serverId, entry) => {
       for (const listener of this.consoleListeners) {
         try {
           listener(serverId, entry);
         } catch (err) {
-          logger.error({ err }, 'Error in console listener');
+          logger.error({ err }, "Error in console listener");
         }
       }
     });
 
-    proc.on('status', (serverId, status) => {
+    proc.on("status", (serverId, status) => {
       for (const listener of this.statusListeners) {
         try {
           listener(serverId, status);
         } catch (err) {
-          logger.error({ err }, 'Error in status listener');
+          logger.error({ err }, "Error in status listener");
         }
       }
     });
 
-    proc.on('players', (serverId, players) => {
+    proc.on("players", (serverId, players) => {
       for (const listener of this.playersListeners) {
         try {
           listener(serverId, players);
         } catch (err) {
-          logger.error({ err }, 'Error in players listener');
+          logger.error({ err }, "Error in players listener");
         }
       }
     });
@@ -392,13 +423,13 @@ class ServerManager {
   private checkPortAvailable(port: number): Promise<boolean> {
     return new Promise((resolve) => {
       const server = net.createServer();
-      server.once('error', () => {
+      server.once("error", () => {
         resolve(false);
       });
-      server.once('listening', () => {
+      server.once("listening", () => {
         server.close(() => resolve(true));
       });
-      server.listen(port, '0.0.0.0');
+      server.listen(port, "0.0.0.0");
     });
   }
 }

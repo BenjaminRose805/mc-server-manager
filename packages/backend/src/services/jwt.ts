@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import { getDb } from "./database.js";
 import type { UserRole, JWTPayload } from "@mc-server-manager/shared";
+import { logger } from "../utils/logger.js";
 
 let cachedSecret: string | null = null;
 
@@ -50,7 +51,8 @@ export function verifyAccessToken(token: string): JWTPayload | null {
     return jwt.verify(token, getOrCreateJWTSecret(), {
       algorithms: ["HS256"],
     }) as JWTPayload;
-  } catch {
+  } catch (err) {
+    logger.debug("JWT verification failed");
     return null;
   }
 }

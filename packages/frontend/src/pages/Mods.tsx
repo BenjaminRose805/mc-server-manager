@@ -36,6 +36,7 @@ import {
   SideBadge,
 } from "@/components/mod-badges";
 import { ModFilterBar } from "@/components/ModFilterBar";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -184,10 +185,14 @@ function InlineVersionPicker({
         if (!cancelled) setVersions(res.versions);
       })
       .catch((err) => {
-        if (!cancelled)
+        if (!cancelled) {
+          logger.warn("Failed to load mod versions", {
+            error: err instanceof Error ? err.message : String(err),
+          });
           toast.error(
             err instanceof Error ? err.message : "Failed to load versions",
           );
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -207,6 +212,9 @@ function InlineVersionPicker({
       });
       toast.success(`Installed ${mod.name}`);
     } catch (err) {
+      logger.warn("Failed to install mod", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(err instanceof Error ? err.message : "Failed to install mod");
     } finally {
       setInstallingVersionId(null);
@@ -415,10 +423,14 @@ function ModpackVersionPicker({
         if (!cancelled) setVersions(res.versions);
       })
       .catch((err) => {
-        if (!cancelled)
+        if (!cancelled) {
+          logger.warn("Failed to load modpack versions", {
+            error: err instanceof Error ? err.message : String(err),
+          });
           toast.error(
             err instanceof Error ? err.message : "Failed to load versions",
           );
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -443,6 +455,9 @@ function ModpackVersionPicker({
         parsed,
       });
     } catch (err) {
+      logger.warn("Failed to parse modpack", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to parse modpack",
       );
@@ -645,6 +660,9 @@ function ModpackReviewModal({
       toast.success(`Installed modpack "${parsed.name}"`);
       onClose();
     } catch (err) {
+      logger.warn("Failed to install modpack", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error(
         err instanceof Error ? err.message : "Failed to install modpack",
       );
@@ -883,11 +901,19 @@ export function Mods() {
     api
       .getModCategories()
       .then((res) => setAllCategories(res.categories))
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn("Failed to fetch mod categories", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
     api
       .getModpackCategories()
       .then((res) => setModpackCategories(res.categories))
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn("Failed to fetch modpack categories", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
     api
       .getSettings()
       .then((settings) => {
@@ -897,7 +923,11 @@ export function Mods() {
           setActiveSources(["modrinth", "curseforge"]);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn("Failed to fetch settings", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
   }, []);
 
   // Reset search and auto-fetch popular mods when server changes

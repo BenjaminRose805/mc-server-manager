@@ -25,6 +25,7 @@ import { checkJavaMcCompat } from "@mc-server-manager/shared";
 import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 import { useServerStore } from "@/stores/serverStore";
+import { logger } from "@/utils/logger";
 
 // ============================================================
 // Types
@@ -127,11 +128,19 @@ export function CreateServer() {
     api
       .getJavaInfo()
       .then(setJavaInfo)
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn("Failed to fetch Java info", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
     api
       .getSystemInfo()
       .then(setSystemInfo)
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn("Failed to fetch system info", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
   }, []);
 
   // Auto-set java path from detected info
@@ -437,7 +446,10 @@ function VersionStep({
         }
         setForgeLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        logger.warn("Failed to fetch versions", {
+          error: err instanceof Error ? err.message : String(err),
+        });
         setForgeInfo(null);
         setNeoforgeInfo(null);
         setForgeLoading(false);
@@ -1158,11 +1170,16 @@ function CreateStep({
             setError(job.error || "Download failed");
             setPhase("error");
           }
-        } catch {
+        } catch (err) {
+          logger.warn("Download status poll failed", {
+            error: err instanceof Error ? err.message : String(err),
+          });
           // polling errors are retried on the next interval
         }
       }, 500);
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.error("Failed to create server", { error: errorMsg });
       setError(err instanceof Error ? err.message : "Failed to create server");
       setPhase("error");
     }
@@ -1180,6 +1197,8 @@ function CreateStep({
       setError("Download cancelled");
       setPhase("error");
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.warn("Failed to cancel download", { error: errorMsg });
       toast.error(
         err instanceof Error ? err.message : "Failed to cancel download",
       );
