@@ -15,7 +15,7 @@
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc -p tsconfig.preload.json",
     "dev": "electron dist/main.js",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
@@ -122,9 +122,6 @@
       "releaseType": "draft"
     },
     "asar": true,
-    "asarUnpack": [
-      "dist/preload.js"
-    ],
     "npmRebuild": true
   }
 }

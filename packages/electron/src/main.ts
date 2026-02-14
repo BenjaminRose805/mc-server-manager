@@ -65,10 +65,7 @@ function createWindow(): BrowserWindow {
     minHeight: 600,
     show: false,
     webPreferences: {
-      preload: path.join(
-        __dirname.replace("app.asar", "app.asar.unpacked"),
-        "preload.js",
-      ),
+      preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
