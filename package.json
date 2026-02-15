@@ -12,15 +12,20 @@
   "scripts": {
     "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w @mc-server-manager/backend\" \"npm run dev -w @mc-server-manager/frontend\"",
     "build": "npm run build -w @mc-server-manager/shared && npm run build -w @mc-server-manager/backend && npm run build -w @mc-server-manager/frontend",
-    "dev:electron": "concurrently -n backend,frontend,electron -c blue,green,magenta \"npm run dev -w @mc-server-manager/backend\" \"npm run dev -w @mc-server-manager/frontend\" \"sleep 3 && npm run dev -w @mc-server-manager/electron\"",
+    "dev:electron": "bash scripts/dev-electron.sh",
     "build:electron": "npm run build && npm run build -w @mc-server-manager/electron",
     "build:electron:win": "npm run build:electron && npm run dist:win -w @mc-server-manager/electron",
     "build:electron:mac": "npm run build:electron && npm run dist -w @mc-server-manager/electron -- --mac",
     "build:electron:linux": "npm run build:electron && npm run dist -w @mc-server-manager/electron -- --linux",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "npm run lint --workspaces --if-present"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
     "concurrently": "^9.1.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.18"
   }
 }
