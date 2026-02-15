@@ -1,4 +1,5 @@
 import type { LauncherAccount } from "@mc-server-manager/shared";
+import { nanoid } from "nanoid";
 import { getDb } from "../services/database.js";
 import { NotFoundError } from "../utils/errors.js";
 
@@ -44,7 +45,6 @@ export function getAccountById(id: string): LauncherAccount {
 }
 
 export interface CreateAccountParams {
-  id: string;
   uuid: string;
   username: string;
   accountType: string;
@@ -52,6 +52,7 @@ export interface CreateAccountParams {
 
 export function createAccount(params: CreateAccountParams): LauncherAccount {
   const db = getDb();
+  const id = nanoid(12);
 
   db.prepare(
     `
@@ -59,13 +60,13 @@ export function createAccount(params: CreateAccountParams): LauncherAccount {
     VALUES (@id, @uuid, @username, @accountType)
   `,
   ).run({
-    id: params.id,
+    id,
     uuid: params.uuid,
     username: params.username,
     accountType: params.accountType,
   });
 
-  return getAccountById(params.id);
+  return getAccountById(id);
 }
 
 export function deleteAccount(id: string): void {

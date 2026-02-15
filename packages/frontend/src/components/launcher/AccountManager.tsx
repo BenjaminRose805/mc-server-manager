@@ -131,8 +131,9 @@ export function AccountManager({
           } else if (status.status === "complete" && status.account) {
             clearTimers();
 
+            let savedAccount: LauncherAccount | null = null;
             try {
-              await api.createLauncherAccount({
+              savedAccount = await api.createLauncherAccount({
                 username: status.account.username,
                 uuid: status.account.uuid,
                 accountType: status.account.accountType,
@@ -145,7 +146,9 @@ export function AccountManager({
             setAuthPhase("success");
             toast.success(`Signed in as ${status.account.username}`);
             await fetchAccounts();
-            onSelectAccount(status.account.id);
+            if (savedAccount) {
+              onSelectAccount(savedAccount.id);
+            }
 
             setTimeout(() => {
               setAuthPhase("idle");
