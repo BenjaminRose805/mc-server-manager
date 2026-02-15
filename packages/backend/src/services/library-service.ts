@@ -52,6 +52,7 @@ export class LibraryService {
   async downloadLibraries(
     versionJson: Record<string, unknown>,
     onProgress?: (current: number, total: number) => void,
+    signal?: AbortSignal,
   ): Promise<string[]> {
     const libraries = versionJson.libraries as LibraryEntry[] | undefined;
     if (!libraries) {
@@ -70,7 +71,7 @@ export class LibraryService {
       const chunk = filtered.slice(i, i + DOWNLOAD_CONCURRENCY);
       const results = await Promise.all(
         chunk.map(async (lib) => {
-          const libPath = await this.downloadLibrary(lib);
+          const libPath = await this.downloadLibrary(lib, signal);
           completed++;
           onProgress?.(completed, total);
           return { lib, path: libPath };
@@ -179,7 +180,10 @@ export class LibraryService {
     });
   }
 
-  private async downloadLibrary(lib: LibraryEntry): Promise<string | null> {
+  private async downloadLibrary(
+    lib: LibraryEntry,
+    signal?: AbortSignal,
+  ): Promise<string | null> {
     const artifact = lib.downloads?.artifact;
     if (!artifact) {
       if (!lib.natives) {
@@ -215,17 +219,18 @@ export class LibraryService {
       );
     }
 
-    await this.downloadArtifact(artifact, libPath);
+    await this.downloadArtifact(artifact, libPath, signal);
     return libPath;
   }
 
   private async downloadArtifact(
     artifact: LibraryArtifact,
     destPath: string,
+    signal?: AbortSignal,
   ): Promise<void> {
     await mkdir(dirname(destPath), { recursive: true });
 
-    const res = await fetch(artifact.url);
+    const res = await fetch(artifact.url, { signal });
     if (!res.ok) {
       logger.warn(
         { url: artifact.url, status: res.status },

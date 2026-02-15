@@ -77,6 +77,7 @@ export class AssetService {
   async downloadAssets(
     versionJson: Record<string, unknown>,
     onProgress?: (current: number, total: number) => void,
+    signal?: AbortSignal,
   ): Promise<void> {
     const indexJson = await this.downloadAssetIndex(versionJson);
     const objects = Object.values(indexJson.objects);
@@ -91,7 +92,7 @@ export class AssetService {
       const chunk = uniqueObjects.slice(i, i + DOWNLOAD_CONCURRENCY);
       await Promise.all(
         chunk.map(async (obj) => {
-          await this.downloadAsset(obj.hash);
+          await this.downloadAsset(obj.hash, signal);
           completed++;
           onProgress?.(completed, total);
         }),
@@ -115,7 +116,10 @@ export class AssetService {
     return unique;
   }
 
-  private async downloadAsset(hash: string): Promise<void> {
+  private async downloadAsset(
+    hash: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
     const prefix = hash.substring(0, 2);
     const objectDir = join(this.objectsDir, prefix);
     const objectPath = join(objectDir, hash);
@@ -127,7 +131,7 @@ export class AssetService {
     await mkdir(objectDir, { recursive: true });
 
     const url = `${ASSET_BASE_URL}/${prefix}/${hash}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal });
     if (!res.ok) {
       throw new Error(
         `Failed to download asset ${hash}: ${res.status} ${res.statusText}`,

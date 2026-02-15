@@ -887,11 +887,29 @@ export interface GameProcess {
   startedAt: string;
 }
 
-export interface DownloadProgressInfo {
-  phase: "version" | "libraries" | "assets";
-  current: number;
-  total: number;
-  currentFile?: string;
+export type PreparePhase =
+  | "pending"
+  | "version"
+  | "libraries"
+  | "assets"
+  | "completed"
+  | "failed";
+
+export interface PrepareJob {
+  id: string;
+  instanceId: string;
+  mcVersion: string;
+  phase: PreparePhase;
+  /** 0-100 overall progress across all phases */
+  progress: number;
+  /** Current item count within the active phase */
+  phaseCurrent: number;
+  /** Total item count within the active phase */
+  phaseTotal: number;
+  /** The prepare result, populated on completion */
+  result: PrepareResponse | null;
+  error?: string;
+  createdAt: number;
 }
 
 export interface PrepareResponse {

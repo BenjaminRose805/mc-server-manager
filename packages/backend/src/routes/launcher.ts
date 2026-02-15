@@ -1,20 +1,21 @@
 import { Router } from "express";
-import path from "node:path";
 import { z } from "zod";
 import * as instanceService from "../services/instance-service.js";
 import * as accountModel from "../models/account.js";
 import { detectAllJavaInstallations, downloadJava } from "../services/java.js";
 import { VersionService } from "../services/version-service.js";
-import { AssetService } from "../services/asset-service.js";
-import { LibraryService } from "../services/library-service.js";
+import {
+  startPrepare,
+  getPrepareJob,
+  cancelPrepare,
+} from "../services/prepare-service.js";
 import { config } from "../config.js";
-import { AppError } from "../utils/errors.js";
+import { AppError, NotFoundError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 export const launcherRouter = Router();
 
 const versionService = new VersionService(config.dataDir);
-const assetService = new AssetService(config.dataDir);
-const libraryService = new LibraryService(config.dataDir);
 
 const createInstanceSchema = z.object({
   name: z.string().min(1).max(100),
@@ -41,7 +42,6 @@ const updateInstanceSchema = z.object({
 });
 
 const createAccountSchema = z.object({
-  id: z.string(),
   uuid: z.string(),
   username: z.string(),
   accountType: z.string().default("msa"),
@@ -123,33 +123,52 @@ launcherRouter.get("/versions", async (req, res, next) => {
   }
 });
 
-launcherRouter.post("/prepare/:id", async (req, res, next) => {
+launcherRouter.post("/prepare/:id", (req, res, next) => {
   try {
     const instance = instanceService.getInstanceById(req.params.id);
+    const job = startPrepare(instance.id, instance.mcVersion);
 
-    const versionJson = await versionService.downloadVersionJson(
-      instance.mcVersion,
+    logger.info(
+      { jobId: job.id, instanceId: instance.id, mcVersion: instance.mcVersion },
+      "Prepare job started",
     );
-    const gameJarPath = await versionService.downloadGameJar(
-      instance.mcVersion,
-    );
 
-    const classpath = await libraryService.downloadLibraries(versionJson);
-    await assetService.downloadAssets(versionJson);
+    res.status(202).json(job);
+  } catch (err) {
+    next(err);
+  }
+});
 
-    const assetIndexObj = versionJson.assetIndex as { id: string } | undefined;
-    const assetIndex =
-      assetIndexObj?.id ?? (versionJson.assets as string) ?? "";
-    const assetsDir = path.join(config.dataDir, "launcher", "assets");
+launcherRouter.get("/prepare/jobs/:jobId", (req, res, next) => {
+  try {
+    const job = getPrepareJob(req.params.jobId);
+    if (!job) {
+      throw new NotFoundError("Prepare job", req.params.jobId);
+    }
+    res.json(job);
+  } catch (err) {
+    next(err);
+  }
+});
 
-    res.json({
-      classpath,
-      mainClass: versionJson.mainClass as string,
-      assetIndex,
-      assetsDir,
-      versionId: instance.mcVersion,
-      gameJarPath,
-    });
+launcherRouter.delete("/prepare/jobs/:jobId", (req, res, next) => {
+  try {
+    const job = getPrepareJob(req.params.jobId);
+    if (!job) {
+      throw new NotFoundError("Prepare job", req.params.jobId);
+    }
+
+    const cancelled = cancelPrepare(req.params.jobId);
+    if (!cancelled) {
+      throw new AppError(
+        "Prepare job is not in progress or already completed",
+        409,
+        "NOT_CANCELLABLE",
+      );
+    }
+
+    logger.info({ jobId: req.params.jobId }, "Prepare job cancelled by user");
+    res.json({ message: "Prepare cancelled", jobId: req.params.jobId });
   } catch (err) {
     next(err);
   }

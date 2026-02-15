@@ -59,6 +59,7 @@ export class VersionService {
 
   async downloadVersionJson(
     versionId: string,
+    signal?: AbortSignal,
   ): Promise<Record<string, unknown>> {
     const versionDir = join(this.versionsDir, versionId);
     const jsonPath = join(versionDir, `${versionId}.json`);
@@ -74,7 +75,7 @@ export class VersionService {
 
     await mkdir(versionDir, { recursive: true });
 
-    const res = await fetch(version.url);
+    const res = await fetch(version.url, { signal });
     if (!res.ok) {
       throw new Error(
         `Failed to download version JSON for ${versionId}: ${res.status} ${res.statusText}`,
@@ -96,8 +97,11 @@ export class VersionService {
     return JSON.parse(body) as Record<string, unknown>;
   }
 
-  async downloadGameJar(versionId: string): Promise<string> {
-    const versionJson = await this.downloadVersionJson(versionId);
+  async downloadGameJar(
+    versionId: string,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    const versionJson = await this.downloadVersionJson(versionId, signal);
     const versionDir = join(this.versionsDir, versionId);
     const jarPath = join(versionDir, `${versionId}.jar`);
 
@@ -129,7 +133,7 @@ export class VersionService {
       "Downloading client JAR",
     );
 
-    const res = await fetch(clientDownload.url);
+    const res = await fetch(clientDownload.url, { signal });
     if (!res.ok) {
       throw new Error(
         `Failed to download client JAR for ${versionId}: ${res.status} ${res.statusText}`,
