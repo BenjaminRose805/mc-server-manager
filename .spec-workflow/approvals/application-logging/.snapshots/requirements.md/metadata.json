@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/application-logging/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-14T00:31:36.671Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771029096642_4otfsu6r5",
+      "approvalTitle": "Application Logging - Requirements Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-14T03:55:20.889Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771035643139_g9m6rkyq1",
+      "approvalTitle": "Application Logging - Requirements"
+    }
+  ]
+}

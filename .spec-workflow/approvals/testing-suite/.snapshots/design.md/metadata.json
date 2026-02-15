@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/testing-suite/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-15T00:44:20.717Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771116260688_nh94pjw55",
+      "approvalTitle": "Testing Suite - Design Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-15T00:53:36.180Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771116260688_nh94pjw55",
+      "approvalTitle": "Testing Suite - Design Document"
+    }
+  ]
+}

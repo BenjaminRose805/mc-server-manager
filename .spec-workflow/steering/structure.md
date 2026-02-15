@@ -4,8 +4,9 @@
 
 ```
 mc-server-manager/
-├── package.json                 # Root workspace config, dev/build/lint scripts
+├── package.json                 # Root workspace config, dev/build/lint/test scripts
 ├── tsconfig.base.json           # Shared TS config (ES2022, strict, bundler resolution)
+├── vitest.config.ts             # Root Vitest workspace config (projects: shared, backend, frontend)
 ├── AGENTS.md                    # AI agent instructions (project overview, conventions)
 ├── PLAN.md                      # Architecture document and phased build plan
 │
@@ -91,6 +92,11 @@ mc-server-manager/
 │   │       ├── utils/           # Utilities
 │   │       │   ├── errors.ts            # AppError, NotFoundError, ConflictError, etc.
 │   │       │   └── logger.ts            # Pino logger (stdout + file via pino-roll)
+│   │       ├── test-utils/      # Test infrastructure (vitest)
+│   │       │   ├── setup.ts             # Env vars (DB_PATH=:memory:, LOG_LEVEL=silent)
+│   │       │   ├── db.ts               # In-memory SQLite setup/teardown
+│   │       │   ├── auth.ts             # Test user creation + JWT generation
+│   │       │   └── factories.ts        # Mock data factories (buildCreateServerRequest)
 │   │       └── ws/              # WebSocket handlers
 │   │
 │   ├── frontend/                # React SPA
@@ -155,6 +161,10 @@ mc-server-manager/
 │   │       │   └── electron.d.ts        # window.electronAPI interface
 │   │       ├── hooks/           # Custom React hooks
 │   │       │   └── useConsole.ts        # Per-server WS subscription lifecycle
+│   │       ├── test-utils/      # Test infrastructure (vitest)
+│   │       │   ├── setup.ts             # jest-dom matchers + cleanup
+│   │       │   ├── render.tsx           # renderWithRouter (MemoryRouter wrapper)
+│   │       │   └── factories.ts        # Mock data factories (buildServer, buildServerList)
 │   │       └── lib/
 │   │           └── utils.ts             # cn() utility (clsx + tailwind-merge)
 │   │
@@ -173,8 +183,10 @@ mc-server-manager/
 ├── shared/                      # Shared TypeScript types
 │   ├── package.json             # @mc-server-manager/shared
 │   ├── tsconfig.json
+│   ├── vitest.config.ts         # Vitest config (node env, globals)
 │   └── src/
-│       └── index.ts             # ALL shared types, interfaces, constants, utilities
+│       ├── index.ts             # ALL shared types, interfaces, constants, utilities
+│       └── index.test.ts        # Utility function tests (28 tests)
 │
 ├── data/                        # Runtime data (gitignored)
 │   ├── mc-manager.db            # SQLite database
@@ -209,6 +221,7 @@ mc-server-manager/
 - **React components**: `PascalCase.tsx` (e.g., `AccountManager.tsx`) -- named exports
 - **Exception**: `mod-badges.tsx` uses kebab-case (lowercase component file)
 - **Migrations**: `NNN_description.sql` (e.g., `001_initial.sql`, `009_multi_user.sql`)
+- **Test files**: `{module-name}.test.ts` or `{component-name}.test.tsx`, co-located with source files
 - **Types**: Declared in `shared/src/index.ts`, not in separate `.d.ts` files (except `electron.d.ts` for ambient window types)
 
 ### Code

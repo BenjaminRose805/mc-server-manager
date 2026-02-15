@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/testing-suite/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-15T00:38:49.836Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771115929762_hxwnjb69b",
+      "approvalTitle": "Testing Suite - Requirements Document"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-15T00:39:38.416Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771115929762_hxwnjb69b",
+      "approvalTitle": "Testing Suite - Requirements Document"
+    }
+  ]
+}

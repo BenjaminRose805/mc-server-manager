@@ -1,0 +1,12 @@
+{
+  "id": "approval_1771125897359_wjlma0xx2",
+  "title": "Update tech.md — replace \"No automated tests\" with Vitest testing details",
+  "filePath": ".spec-workflow/steering/tech.md",
+  "type": "document",
+  "status": "approved",
+  "createdAt": "2026-02-15T03:24:57.359Z",
+  "category": "steering",
+  "categoryName": "steering",
+  "response": "Approved via dashboard",
+  "respondedAt": "2026-02-15T03:26:39.757Z"
+}

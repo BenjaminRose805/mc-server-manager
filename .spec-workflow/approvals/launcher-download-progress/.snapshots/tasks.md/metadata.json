@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/launcher-download-progress/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-15T03:33:57.356Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771126437330_4oekm0u1i",
+      "approvalTitle": "Tasks: Launcher Download Progress"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-15T03:35:11.396Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771126437330_4oekm0u1i",
+      "approvalTitle": "Tasks: Launcher Download Progress"
+    }
+  ]
+}

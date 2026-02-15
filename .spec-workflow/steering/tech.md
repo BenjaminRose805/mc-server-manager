@@ -161,6 +161,9 @@ npm run dev -w backend         # tsx watch on port 3001
 npm run dev -w frontend        # Vite on port 5173
 npm run build                  # shared -> backend -> frontend (order matters)
 npm run build -w shared        # Must build first (TypeScript project references)
+npm test                       # Run all tests (vitest workspace: shared + backend + frontend)
+npm run test:watch             # Watch mode
+npm run test:coverage          # Coverage report (v8 provider)
 ```
 
 ### Build Order (enforced by TS project references)
@@ -174,7 +177,7 @@ npm run build -w shared        # Must build first (TypeScript project references
 - **TypeScript**: Strict mode, `tsconfig.base.json` shared config
 - **No linter configured**: (consider adding ESLint in future)
 - **No formatter configured**: (consider adding Prettier in future)
-- **No automated tests**: All testing is manual. This is a known gap.
+- **Automated tests**: Vitest test suite with 136 tests across shared, backend, and frontend packages. Run via `npm test` from root.
 
 ### Version Control
 - **VCS**: Git
@@ -207,7 +210,7 @@ npm run build -w shared        # Must build first (TypeScript project references
 
 ## Known Limitations
 
-- **No automated tests**: All verification is manual or build-based. High-risk area.
+- **Automated tests present but coverage is partial**: Vitest 4.x with 136 tests covering shared utilities, backend unit/integration (ConsoleBuffer, errors, Zod schemas, properties parser, server CRUD routes via supertest), and frontend (Zustand store actions, StatusBadge/ServerCard components via Testing Library). Many services and components remain untested — expand coverage as features are added.
 - **Single-node only**: The app assumes one machine. No clustering, no distributed state.
 - **SQLite concurrency**: WAL mode helps but won't scale to hundreds of concurrent writers.
 - **No hot reload for Electron**: Changes to main process require restart.
