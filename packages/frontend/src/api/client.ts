@@ -35,6 +35,7 @@ import type {
   LauncherAccount,
   MinecraftVersion,
   PrepareResponse,
+  PrepareJob,
 } from "@mc-server-manager/shared";
 
 class ApiError extends Error {
@@ -525,9 +526,19 @@ export const api = {
     return request<MinecraftVersion[]>(`/api/launcher/versions${qs}`);
   },
 
-  prepareLaunch(instanceId: string): Promise<PrepareResponse> {
-    return request<PrepareResponse>(`/api/launcher/prepare/${instanceId}`, {
+  prepareLaunch(instanceId: string): Promise<PrepareJob> {
+    return request<PrepareJob>(`/api/launcher/prepare/${instanceId}`, {
       method: "POST",
+    });
+  },
+
+  getPrepareStatus(jobId: string): Promise<PrepareJob> {
+    return request<PrepareJob>(`/api/launcher/prepare/jobs/${jobId}`);
+  },
+
+  cancelPrepare(jobId: string): Promise<{ message: string }> {
+    return request<{ message: string }>(`/api/launcher/prepare/jobs/${jobId}`, {
+      method: "DELETE",
     });
   },
 

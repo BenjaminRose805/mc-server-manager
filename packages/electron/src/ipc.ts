@@ -1,4 +1,5 @@
 import { ipcMain } from "electron";
+import type { PrepareResponse } from "@mc-server-manager/shared";
 import * as auth from "./auth.js";
 import * as launcher from "./launcher.js";
 
@@ -54,7 +55,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     "launch-game",
     serializableHandler((args) =>
-      launcher.launchGame(args.instanceId as string, args.accountId as string),
+      launcher.launchGame(
+        args.instanceId as string,
+        args.accountId as string,
+        args.prepareResult as PrepareResponse,
+      ),
     ),
   );
 

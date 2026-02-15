@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useParams } from "react-router";
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import type {
   LauncherInstance,
   UpdateInstanceRequest,
+  PrepareJob,
 } from "@mc-server-manager/shared";
 import { api } from "@/api/client";
 import { ModList } from "@/components/ModList";
@@ -444,6 +445,20 @@ export default function InstanceDetail() {
     () => localStorage.getItem("launcher_selectedAccount"),
   );
   const [preparing, setPreparing] = useState(false);
+  const [prepareProgress, setPrepareProgress] = useState<{
+    phase: "version" | "libraries" | "assets";
+    current: number;
+    total: number;
+  }>({ phase: "version", current: 0, total: 0 });
+  const [cancelling, setCancelling] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prepareJobIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const fetchInstance = useCallback(() => {
     if (!id) return;
@@ -500,20 +515,94 @@ export default function InstanceDetail() {
   const handleLaunch = async () => {
     if (!id || !selectedAccountId) return;
     setPreparing(true);
+    setPrepareProgress({ phase: "version", current: 0, total: 0 });
+
     try {
-      await api.prepareLaunch(id);
-      if (isDesktop()) {
-        await window.electronAPI!.launchGame(id, selectedAccountId);
-        toast.success("Game launched!");
-      } else {
-        toast.info("Game files prepared. Launch requires the desktop app.");
-      }
+      const job = await api.prepareLaunch(id);
+      prepareJobIdRef.current = job.id;
+
+      pollRef.current = setInterval(async () => {
+        try {
+          const j = await api.getPrepareStatus(prepareJobIdRef.current!);
+
+          if (
+            j.phase !== "pending" &&
+            j.phase !== "completed" &&
+            j.phase !== "failed"
+          ) {
+            setPrepareProgress({
+              phase: j.phase,
+              current: j.phaseCurrent,
+              total: j.phaseTotal,
+            });
+          }
+
+          if (j.phase === "completed") {
+            if (pollRef.current) {
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+            }
+            setPreparing(false);
+            prepareJobIdRef.current = null;
+
+            if (j.result) {
+              if (isDesktop()) {
+                await window.electronAPI!.launchGame(
+                  id,
+                  selectedAccountId,
+                  j.result,
+                );
+                toast.success("Game launched!");
+              } else {
+                toast.info(
+                  "Game files prepared. Launch requires the desktop app.",
+                );
+              }
+            }
+          } else if (j.phase === "failed") {
+            if (pollRef.current) {
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+            }
+            setPreparing(false);
+            prepareJobIdRef.current = null;
+            if (j.error !== "Cancelled") {
+              toast.error(j.error || "Prepare failed");
+            }
+          }
+        } catch (err) {
+          logger.warn("Prepare status poll failed", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }, 500);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to launch";
-      logger.warn("Failed to launch game", { error: message });
+      logger.warn("Failed to start prepare", { error: message });
       toast.error(message);
-    } finally {
       setPreparing(false);
+    }
+  };
+
+  const handleCancelPrepare = async () => {
+    if (!prepareJobIdRef.current || cancelling) return;
+    setCancelling(true);
+    try {
+      await api.cancelPrepare(prepareJobIdRef.current);
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      setPreparing(false);
+      prepareJobIdRef.current = null;
+      toast.info("Download cancelled");
+    } catch (err) {
+      logger.warn("Failed to cancel prepare", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      toast.error(err instanceof Error ? err.message : "Failed to cancel");
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -700,7 +789,8 @@ export default function InstanceDetail() {
 
       <DownloadProgress
         visible={preparing}
-        progress={{ phase: "version", current: 0, total: 0 }}
+        progress={prepareProgress}
+        onCancel={handleCancelPrepare}
       />
     </div>
   );

@@ -3,6 +3,8 @@ import { Play, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { isDesktop } from "@/utils/desktop";
+import { api } from "@/api/client";
+import { logger } from "@/utils/logger";
 
 interface LaunchButtonProps {
   instanceId: string;
@@ -33,13 +35,32 @@ export function LaunchButton({
     setState("launching");
 
     try {
-      await window.electronAPI!.launchGame(instanceId, accountId!);
-      setState("running");
-      toast.success("Game launched");
+      const job = await api.prepareLaunch(instanceId);
+
+      const poll = async (): Promise<void> => {
+        const j = await api.getPrepareStatus(job.id);
+        if (j.phase === "completed" && j.result) {
+          await window.electronAPI!.launchGame(
+            instanceId,
+            accountId!,
+            j.result,
+          );
+          setState("running");
+          toast.success("Game launched");
+        } else if (j.phase === "failed") {
+          setState("ready");
+          toast.error(j.error || "Prepare failed");
+        } else {
+          await new Promise((r) => setTimeout(r, 500));
+          return poll();
+        }
+      };
+      await poll();
     } catch (err) {
       setState("ready");
       const message =
         err instanceof Error ? err.message : "Failed to launch game";
+      logger.warn("LaunchButton failed", { error: message });
       toast.error(message);
     }
   };

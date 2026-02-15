@@ -4,6 +4,7 @@ import type {
   LauncherAccount,
   GameProcess,
   JavaInstallation,
+  PrepareResponse,
 } from "@mc-server-manager/shared";
 
 export interface ElectronAPI {
@@ -18,7 +19,11 @@ export interface ElectronAPI {
   removeAccount(uuid: string): Promise<void>;
 
   // Game launcher
-  launchGame(instanceId: string, accountId: string): Promise<GameProcess>;
+  launchGame(
+    instanceId: string,
+    accountId: string,
+    prepareResult: PrepareResponse,
+  ): Promise<GameProcess>;
   getRunningGames(): Promise<GameProcess[]>;
   killGame(instanceId: string): Promise<void>;
 

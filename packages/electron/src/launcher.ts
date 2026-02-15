@@ -61,6 +61,7 @@ async function resolveJavaPath(instance: LauncherInstance): Promise<string> {
 export async function launchGame(
   instanceId: string,
   accountId: string,
+  prepareResult: PrepareResponse,
 ): Promise<GameProcess> {
   if (runningGames.some((g) => g.process.instanceId === instanceId)) {
     throw new Error("Game is already running for this instance");
@@ -80,14 +81,9 @@ export async function launchGame(
 
   const mcToken = await getMcAccessToken(account.uuid);
 
-  const prepareRes = await fetchJson<PrepareResponse>(
-    `${baseUrl()}/api/launcher/prepare/${instanceId}`,
-    { method: "POST" },
-  );
-
   const javaPath = await resolveJavaPath(instance);
 
-  const launcherBase = path.dirname(prepareRes.assetsDir);
+  const launcherBase = path.dirname(prepareResult.assetsDir);
 
   const nativesDir = path.join(
     launcherBase,
@@ -96,7 +92,7 @@ export async function launchGame(
   );
   mkdirSync(nativesDir, { recursive: true });
 
-  const allClasspath = [...prepareRes.classpath, prepareRes.gameJarPath];
+  const allClasspath = [...prepareResult.classpath, prepareResult.gameJarPath];
   const separator = process.platform === "win32" ? ";" : ":";
   const classpathStr = allClasspath.join(separator);
 
@@ -121,9 +117,9 @@ export async function launchGame(
     "--gameDir",
     instanceDir,
     "--assetsDir",
-    prepareRes.assetsDir,
+    prepareResult.assetsDir,
     "--assetIndex",
-    prepareRes.assetIndex,
+    prepareResult.assetIndex,
     "--uuid",
     account.uuid,
     "--accessToken",
@@ -145,7 +141,7 @@ export async function launchGame(
 
   gameArgs.push(...instance.gameArgs);
 
-  const args = [...jvmArgs, prepareRes.mainClass, ...gameArgs];
+  const args = [...jvmArgs, prepareResult.mainClass, ...gameArgs];
 
   const child = spawn(javaPath, args, {
     cwd: instanceDir,

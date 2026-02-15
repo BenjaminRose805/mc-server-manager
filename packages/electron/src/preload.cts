@@ -13,8 +13,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   removeAccount: (uuid: string) =>
     ipcRenderer.invoke("remove-account", { uuid }),
 
-  launchGame: (instanceId: string, accountId: string) =>
-    ipcRenderer.invoke("launch-game", { instanceId, accountId }),
+   launchGame: (instanceId: string, accountId: string, prepareResult: unknown) =>
+     ipcRenderer.invoke("launch-game", { instanceId, accountId, prepareResult }),
   getRunningGames: () => ipcRenderer.invoke("get-running-games"),
   killGame: (instanceId: string) =>
     ipcRenderer.invoke("kill-game", { instanceId }),
