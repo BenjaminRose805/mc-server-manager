@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/codebase-cleanup/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2026-02-15T22:13:13.393Z",
+      "trigger": "initial",
+      "approvalId": "approval_1771193593372_t608ati6v",
+      "approvalTitle": "Codebase Cleanup Tasks"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2026-02-15T22:13:48.256Z",
+      "trigger": "approved",
+      "approvalId": "approval_1771193593372_t608ati6v",
+      "approvalTitle": "Codebase Cleanup Tasks"
+    }
+  ]
+}
