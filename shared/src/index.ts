@@ -781,7 +781,8 @@ export interface MojangVersionEntry {
 
 // --- Launcher Types ---
 
-export type LoaderType = "fabric" | "forge" | "neoforge" | "quilt";
+/** Launcher supports all server mod loaders plus Quilt (client-side only) */
+export type LoaderType = ModLoader | "quilt";
 
 export type VersionType = "release" | "snapshot" | "old_beta" | "old_alpha";
 
@@ -838,14 +839,8 @@ export interface LauncherAccount {
   createdAt: string;
 }
 
-export interface MinecraftVersion {
-  id: string;
-  type: VersionType;
-  url: string;
-  time: string;
-  releaseTime: string;
-  sha1: string;
-}
+/** Launcher-side version entry (subset of MojangVersionEntry, no complianceLevel) */
+export type MinecraftVersion = Omit<MojangVersionEntry, "complianceLevel">;
 
 export interface VersionManifest {
   latest: {
