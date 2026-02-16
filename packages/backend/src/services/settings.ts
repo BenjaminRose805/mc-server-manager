@@ -39,24 +39,18 @@ export function getAllSettings(): AppSettings {
     stored[row.key] = row.value;
   }
 
-  const result: Record<string, string | number | boolean> = {};
-  for (const key of SETTING_KEYS) {
-    const defaultVal = DEFAULTS[key];
-    if (key in stored) {
-      if (typeof defaultVal === "number") {
-        const parsed = parseInt(stored[key], 10);
-        result[key] = isNaN(parsed) ? defaultVal : parsed;
-      } else if (typeof defaultVal === "boolean") {
-        result[key] = stored[key] === "true";
-      } else {
-        result[key] = stored[key];
-      }
-    } else {
-      result[key] = defaultVal;
-    }
-  }
-
-  return result as unknown as AppSettings;
+  return {
+    javaPath: stored.javaPath ?? DEFAULTS.javaPath,
+    dataDir: stored.dataDir ?? DEFAULTS.dataDir,
+    defaultJvmArgs: stored.defaultJvmArgs ?? DEFAULTS.defaultJvmArgs,
+    maxConsoleLines: stored.maxConsoleLines
+      ? parseInt(stored.maxConsoleLines, 10) || DEFAULTS.maxConsoleLines
+      : DEFAULTS.maxConsoleLines,
+    curseforgeApiKey: stored.curseforgeApiKey ?? DEFAULTS.curseforgeApiKey,
+    showOverridePreview: stored.showOverridePreview
+      ? stored.showOverridePreview === "true"
+      : DEFAULTS.showOverridePreview,
+  };
 }
 
 /**

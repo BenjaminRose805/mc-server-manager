@@ -8,7 +8,6 @@
 
 import type { WebSocket } from "ws";
 import type {
-  WsClientMessage,
   WsConsoleHistory,
   WsStatusChange,
   WsCommandAck,
@@ -150,19 +149,22 @@ export function handleMessage(ws: WebSocket, raw: string): void {
   }
 
   switch (msg.type) {
-    case "subscribe":
-      handleSubscribe(ws, (msg as unknown as WsClientMessage).serverId);
+    case "subscribe": {
+      const serverId = typeof msg.serverId === "string" ? msg.serverId : "";
+      handleSubscribe(ws, serverId);
       break;
-    case "unsubscribe":
-      handleUnsubscribe(ws, (msg as unknown as WsClientMessage).serverId);
+    }
+    case "unsubscribe": {
+      const serverId = typeof msg.serverId === "string" ? msg.serverId : "";
+      handleUnsubscribe(ws, serverId);
       break;
-    case "command":
-      handleCommand(
-        ws,
-        (msg as unknown as WsClientMessage).serverId,
-        (msg as { command: string }).command,
-      );
+    }
+    case "command": {
+      const serverId = typeof msg.serverId === "string" ? msg.serverId : "";
+      const command = typeof msg.command === "string" ? msg.command : "";
+      handleCommand(ws, serverId, command);
       break;
+    }
     default:
       sendMessage(ws, {
         type: "error",
