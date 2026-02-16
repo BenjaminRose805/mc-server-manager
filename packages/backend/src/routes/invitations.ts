@@ -8,6 +8,7 @@ import {
   deleteInvitation,
 } from "../models/invitation.js";
 import { AppError } from "../utils/errors.js";
+import { validate } from "../utils/validation.js";
 import { logger } from "../utils/logger.js";
 import { requireAuth, requireAdminOrOwner } from "../middleware/auth.js";
 
@@ -60,15 +61,7 @@ const createInvitationSchema = z.object({
  */
 invitationsRouter.post("/", (req, res, next) => {
   try {
-    const parsed = createInvitationSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const body = parsed.data;
+    const body = validate(createInvitationSchema, req.body);
     const id = nanoid(12);
     const code = generateCode();
 

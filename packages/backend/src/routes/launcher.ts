@@ -11,6 +11,7 @@ import {
 } from "../services/prepare-service.js";
 import { config } from "../config.js";
 import { AppError, NotFoundError } from "../utils/errors.js";
+import { validate } from "../utils/validation.js";
 import { logger } from "../utils/logger.js";
 
 export const launcherRouter = Router();
@@ -67,15 +68,9 @@ launcherRouter.get("/instances/:id", (req, res, next) => {
 
 launcherRouter.post("/instances", (req, res, next) => {
   try {
-    const parsed = createInstanceSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
+    const body = validate(createInstanceSchema, req.body);
 
-    const instance = instanceService.createInstance(parsed.data);
+    const instance = instanceService.createInstance(body);
     res.status(201).json(instance);
   } catch (err) {
     next(err);
@@ -84,15 +79,9 @@ launcherRouter.post("/instances", (req, res, next) => {
 
 launcherRouter.patch("/instances/:id", (req, res, next) => {
   try {
-    const parsed = updateInstanceSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
+    const body = validate(updateInstanceSchema, req.body);
 
-    const instance = instanceService.updateInstance(req.params.id, parsed.data);
+    const instance = instanceService.updateInstance(req.params.id, body);
     res.json(instance);
   } catch (err) {
     next(err);
@@ -185,15 +174,9 @@ launcherRouter.get("/accounts", (_req, res, next) => {
 
 launcherRouter.post("/accounts", (req, res, next) => {
   try {
-    const parsed = createAccountSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
+    const body = validate(createAccountSchema, req.body);
 
-    const account = accountModel.createAccount(parsed.data);
+    const account = accountModel.createAccount(body);
     res.status(201).json(account);
   } catch (err) {
     next(err);
@@ -224,18 +207,9 @@ launcherRouter.get("/java", async (_req, res, next) => {
 
 launcherRouter.post("/java/download", async (req, res, next) => {
   try {
-    const parsed = downloadJavaSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
+    const body = validate(downloadJavaSchema, req.body);
 
-    const installation = await downloadJava(
-      parsed.data.version,
-      config.dataDir,
-    );
+    const installation = await downloadJava(body.version, config.dataDir);
     res.json(installation);
   } catch (err) {
     next(err);

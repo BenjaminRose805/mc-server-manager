@@ -14,7 +14,7 @@ import {
   detectClientLoader,
   getClientLoaderVersions,
 } from "../services/mod-loader-service.js";
-import { AppError } from "../utils/errors.js";
+import { validate } from "../utils/validation.js";
 import { logger } from "../utils/logger.js";
 
 export const instanceModsRouter = Router({ mergeParams: true });
@@ -60,15 +60,10 @@ instanceModsRouter.get("/instances/:id/mods", async (req, res, next) => {
  */
 instanceModsRouter.post("/instances/:id/mods", async (req, res, next) => {
   try {
-    const parsed = installModSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const { source, sourceId, versionId } = parsed.data;
+    const { source, sourceId, versionId } = validate(
+      installModSchema,
+      req.body,
+    );
     const instance = getInstanceById(req.params.id);
     const target = instanceToModTarget(instance);
     const mod = await installMod(target, source, sourceId, versionId);
@@ -144,15 +139,7 @@ instanceModsRouter.get("/instances/:id/loader", async (req, res, next) => {
  */
 instanceModsRouter.post("/instances/:id/loader", async (req, res, next) => {
   try {
-    const parsed = installLoaderSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const { loader, loaderVersion } = parsed.data;
+    const { loader, loaderVersion } = validate(installLoaderSchema, req.body);
     await installClientLoader(req.params.id, loader, loaderVersion);
 
     logger.info(
@@ -185,15 +172,10 @@ instanceModsRouter.get(
   "/instances/:id/loader/versions",
   async (req, res, next) => {
     try {
-      const parsed = loaderVersionsQuerySchema.safeParse(req.query);
-      if (!parsed.success) {
-        const message = parsed.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join("; ");
-        throw new AppError(message, 400, "VALIDATION_ERROR");
-      }
-
-      const { loader, mcVersion } = parsed.data;
+      const { loader, mcVersion } = validate(
+        loaderVersionsQuerySchema,
+        req.query,
+      );
       const versions = await getClientLoaderVersions(loader, mcVersion);
       res.json({ versions });
     } catch (err) {

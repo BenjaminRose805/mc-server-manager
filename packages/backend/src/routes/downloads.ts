@@ -8,6 +8,7 @@ import {
 } from "../services/download.js";
 import { getServerById } from "../models/server.js";
 import { AppError, NotFoundError } from "../utils/errors.js";
+import { validate } from "../utils/validation.js";
 import { logger } from "../utils/logger.js";
 
 export const downloadsRouter = Router();
@@ -58,15 +59,10 @@ const downloadRequestSchema = z.discriminatedUnion("serverType", [
  */
 downloadsRouter.post("/", (req, res, next) => {
   try {
-    const parsed = downloadRequestSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const request = parsed.data as DownloadRequest;
+    const request = validate(
+      downloadRequestSchema,
+      req.body,
+    ) as DownloadRequest;
 
     // Verify the server exists and get its directory
     const server = getServerById(request.serverId);

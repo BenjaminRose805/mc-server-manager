@@ -18,6 +18,7 @@ import {
 } from "../services/mod-manager.js";
 import { getServerById } from "../models/server.js";
 import { AppError } from "../utils/errors.js";
+import { validate } from "../utils/validation.js";
 import { logger } from "../utils/logger.js";
 
 // Router for global mod routes: /api/mods/...
@@ -92,15 +93,10 @@ serverModsRouter.get("/:id/mods", async (req, res, next) => {
  */
 serverModsRouter.post("/:id/mods", async (req, res, next) => {
   try {
-    const parsed = installModSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const { source, sourceId, versionId } = parsed.data;
+    const { source, sourceId, versionId } = validate(
+      installModSchema,
+      req.body,
+    );
     const server = getServerById(req.params.id);
     const target = serverToModTarget(server);
     const mod = await installMod(target, source, sourceId, versionId);
@@ -158,14 +154,6 @@ serverModsRouter.patch("/:id/mods/:modId", async (req, res, next) => {
  */
 modsRouter.get("/search", async (req, res, next) => {
   try {
-    const parsed = searchQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
     const {
       q,
       loader,
@@ -176,7 +164,7 @@ modsRouter.get("/search", async (req, res, next) => {
       categories,
       environment,
       sources,
-    } = parsed.data;
+    } = validate(searchQuerySchema, req.query);
     const results = await searchMods(
       q ?? "",
       loader as ModLoader,
@@ -217,16 +205,8 @@ modsRouter.get("/:source/:sourceId/versions", async (req, res, next) => {
       );
     }
 
-    const queryParsed = versionsQuerySchema.safeParse(req.query);
-    if (!queryParsed.success) {
-      const message = queryParsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
     const source = sourceResult.data as ModSource;
-    const { loader, mcVersion } = queryParsed.data;
+    const { loader, mcVersion } = validate(versionsQuerySchema, req.query);
     const versions = await getModVersions(
       source,
       req.params.sourceId,

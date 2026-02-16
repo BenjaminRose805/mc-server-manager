@@ -16,6 +16,7 @@ import { getModpackById } from "../models/modpack.js";
 import { getModsByModpackId } from "../models/mod.js";
 import { getServerById } from "../models/server.js";
 import { AppError } from "../utils/errors.js";
+import { validate } from "../utils/validation.js";
 import { logger } from "../utils/logger.js";
 
 export const modpacksRouter = Router();
@@ -61,14 +62,6 @@ const installModpackSchema = z.object({
 
 modpacksRouter.get("/search", async (req, res, next) => {
   try {
-    const parsed = searchQuerySchema.safeParse(req.query);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
     const {
       q,
       mcVersion,
@@ -78,7 +71,7 @@ modpacksRouter.get("/search", async (req, res, next) => {
       categories,
       environment,
       sources,
-    } = parsed.data;
+    } = validate(searchQuerySchema, req.query);
     const results = await searchModpacks(
       q ?? "",
       offset,
@@ -137,19 +130,13 @@ modpacksRouter.post("/:source/:sourceId/parse", async (req, res, next) => {
     const bodySchema = z.object({
       versionId: z.string().min(1, "versionId is required"),
     });
-    const bodyResult = bodySchema.safeParse(req.body);
-    if (!bodyResult.success) {
-      const message = bodyResult.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
+    const body = validate(bodySchema, req.body);
 
     const source = sourceResult.data as ModSource;
     const parsed = await parseModpack(
       source,
       req.params.sourceId,
-      bodyResult.data.versionId,
+      body.versionId,
     );
     res.json(parsed);
   } catch (err) {
@@ -170,16 +157,8 @@ serverModpacksRouter.get("/:id/modpacks", async (req, res, next) => {
 
 serverModpacksRouter.post("/:id/modpacks", async (req, res, next) => {
   try {
-    const parsed = installModpackSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
     const { source, sourceId, versionId, selectedEntries, applyOverrides } =
-      parsed.data;
+      validate(installModpackSchema, req.body);
     const server = getServerById(req.params.id);
     const target = serverToModTarget(server);
     const modpack = await installModpack(

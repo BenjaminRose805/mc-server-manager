@@ -34,6 +34,7 @@ import {
   UnauthorizedError,
   ForbiddenError,
 } from "../utils/errors.js";
+import { validate } from "../utils/validation.js";
 import { logger } from "../utils/logger.js";
 
 export const authRouter = Router();
@@ -83,15 +84,7 @@ authRouter.post("/setup", async (req, res, next) => {
       throw new ConflictError("Setup already completed");
     }
 
-    const parsed = setupSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const { username, password, displayName } = parsed.data;
+    const { username, password, displayName } = validate(setupSchema, req.body);
     const passwordHash = await hashPassword(password);
     const id = nanoid(12);
 
@@ -131,15 +124,10 @@ authRouter.post("/setup", async (req, res, next) => {
 
 authRouter.post("/register", async (req, res, next) => {
   try {
-    const parsed = registerSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const { inviteCode, username, password, displayName } = parsed.data;
+    const { inviteCode, username, password, displayName } = validate(
+      registerSchema,
+      req.body,
+    );
 
     const invitation = getInvitationByCode(inviteCode);
     if (!invitation) {
@@ -195,15 +183,7 @@ authRouter.post("/login", async (req, res, next) => {
   try {
     const ip = req.ip ?? "unknown";
 
-    const parsed = loginSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const { username, password } = parsed.data;
+    const { username, password } = validate(loginSchema, req.body);
 
     if (isLockedOut(username, ip)) {
       res.set("Retry-After", "900");
@@ -259,15 +239,9 @@ authRouter.post("/login", async (req, res, next) => {
 
 authRouter.post("/refresh", (req, res, next) => {
   try {
-    const parsed = refreshSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
+    const body = validate(refreshSchema, req.body);
 
-    const session = validateRefreshToken(parsed.data.refreshToken);
+    const session = validateRefreshToken(body.refreshToken);
     if (!session) {
       throw new UnauthorizedError("Invalid or expired refresh token");
     }
@@ -291,15 +265,9 @@ authRouter.post("/refresh", (req, res, next) => {
 
 authRouter.post("/logout", (req, res, next) => {
   try {
-    const parsed = refreshSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
+    const body = validate(refreshSchema, req.body);
 
-    const session = validateRefreshToken(parsed.data.refreshToken);
+    const session = validateRefreshToken(body.refreshToken);
     if (session) {
       revokeSession(session.id);
     }

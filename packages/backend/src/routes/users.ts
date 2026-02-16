@@ -16,6 +16,7 @@ import {
 import { verifyPassword, hashPassword } from "../services/auth.js";
 import { revokeAllUserSessions } from "../services/session.js";
 import { AppError, NotFoundError, ForbiddenError } from "../utils/errors.js";
+import { validate } from "../utils/validation.js";
 import { logger } from "../utils/logger.js";
 
 export const usersRouter = Router();
@@ -52,15 +53,7 @@ usersRouter.get("/me", requireAuth, (req, res, next) => {
 
 usersRouter.patch("/me", requireAuth, async (req, res, next) => {
   try {
-    const parsed = updateProfileSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const body = parsed.data;
+    const body = validate(updateProfileSchema, req.body);
     const updateData: {
       displayName?: string;
       avatarUrl?: string;
@@ -119,15 +112,7 @@ usersRouter.patch("/me", requireAuth, async (req, res, next) => {
 
 usersRouter.patch("/me/minecraft", requireAuth, (req, res, next) => {
   try {
-    const parsed = updateMinecraftSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const body = parsed.data;
+    const body = validate(updateMinecraftSchema, req.body);
 
     updateUserProfile(req.user!.id, {
       minecraftUsername: body.minecraftUsername,
@@ -152,7 +137,8 @@ usersRouter.get("/", requireAuth, requireAdminOrOwner, (req, res, next) => {
       {};
 
     if (req.query.role && typeof req.query.role === "string") {
-      filters.role = req.query.role as "owner" | "admin" | "member";
+      const roleSchema = z.enum(["owner", "admin", "member"]).optional();
+      filters.role = validate(roleSchema, req.query.role);
     }
     if (req.query.active !== undefined) {
       filters.active = req.query.active === "true";
@@ -167,7 +153,7 @@ usersRouter.get("/", requireAuth, requireAdminOrOwner, (req, res, next) => {
 
 usersRouter.get("/:id", requireAuth, requireAdminOrOwner, (req, res, next) => {
   try {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const id = validate(z.string().min(1), req.params.id);
     const user = getUserById(id);
     if (!user) {
       throw new NotFoundError("User", id);
@@ -180,15 +166,9 @@ usersRouter.get("/:id", requireAuth, requireAdminOrOwner, (req, res, next) => {
 
 usersRouter.patch("/:id/role", requireAuth, requireOwner, (req, res, next) => {
   try {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const id = validate(z.string().min(1), req.params.id);
 
-    const parsed = updateRoleSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
+    const body = validate(updateRoleSchema, req.body);
 
     const targetUser = getUserById(id);
     if (!targetUser) {
@@ -199,14 +179,14 @@ usersRouter.patch("/:id/role", requireAuth, requireOwner, (req, res, next) => {
       throw new AppError("Cannot change owner role", 400, "VALIDATION_ERROR");
     }
 
-    updateUserRole(id, parsed.data.role);
+    updateUserRole(id, body.role);
 
     const updatedUser = getUserById(id);
     if (!updatedUser) {
       throw new NotFoundError("User", id);
     }
 
-    logger.info({ userId: id, newRole: parsed.data.role }, "User role updated");
+    logger.info({ userId: id, newRole: body.role }, "User role updated");
     res.json(updatedUser);
   } catch (err) {
     next(err);
@@ -215,7 +195,7 @@ usersRouter.patch("/:id/role", requireAuth, requireOwner, (req, res, next) => {
 
 usersRouter.delete("/:id", requireAuth, requireOwner, (req, res, next) => {
   try {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const id = validate(z.string().min(1), req.params.id);
 
     const targetUser = getUserById(id);
     if (!targetUser) {

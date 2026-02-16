@@ -18,6 +18,7 @@ import {
   updatePropertiesSchema,
 } from "./validation.js";
 import { AppError, ConflictError } from "../utils/errors.js";
+import { validate } from "../utils/validation.js";
 import { logger } from "../utils/logger.js";
 import { setupServerDirectory } from "../services/server-setup.js";
 import { serverManager } from "../services/server-manager.js";
@@ -79,16 +80,7 @@ serversRouter.get(
  */
 serversRouter.post("/", requireAuth, (req, res, next) => {
   try {
-    // Validate request body
-    const parsed = createServerSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const message = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      throw new AppError(message, 400, "VALIDATION_ERROR");
-    }
-
-    const body = parsed.data;
+    const body = validate(createServerSchema, req.body);
 
     // Check for port conflict
     if (isPortInUse(body.port)) {
@@ -132,15 +124,7 @@ serversRouter.patch(
   requireServerPermission("can_edit"),
   (req, res, next) => {
     try {
-      const parsed = updateServerSchema.safeParse(req.body);
-      if (!parsed.success) {
-        const message = parsed.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join("; ");
-        throw new AppError(message, 400, "VALIDATION_ERROR");
-      }
-
-      const body = parsed.data;
+      const body = validate(updateServerSchema, req.body);
 
       const id = req.params.id as string;
 
@@ -356,13 +340,7 @@ serversRouter.put(
   requireServerPermission("can_edit"),
   (req, res, next) => {
     try {
-      const parsed = updatePropertiesSchema.safeParse(req.body);
-      if (!parsed.success) {
-        const message = parsed.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join("; ");
-        throw new AppError(message, 400, "VALIDATION_ERROR");
-      }
+      const body = validate(updatePropertiesSchema, req.body);
 
       const server = getServerById(req.params.id as string);
 
@@ -370,7 +348,7 @@ serversRouter.put(
       // This preserves any properties not included in the request
       // (e.g., properties set by mods or unknown to our metadata).
       const existing = readServerProperties(server.directory);
-      const merged = { ...existing, ...parsed.data.properties };
+      const merged = { ...existing, ...body.properties };
 
       writeServerProperties(server.directory, merged);
 
@@ -423,13 +401,7 @@ serversRouter.put(
   requireAdminOrOwner,
   (req, res, next) => {
     try {
-      const parsed = upsertPermissionSchema.safeParse(req.body);
-      if (!parsed.success) {
-        const message = parsed.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join("; ");
-        throw new AppError(message, 400, "VALIDATION_ERROR");
-      }
+      const body = validate(upsertPermissionSchema, req.body);
 
       const serverId = req.params.id as string;
       const userId = req.params.userId as string;
@@ -438,7 +410,7 @@ serversRouter.put(
         id: nanoid(12),
         serverId,
         userId,
-        ...parsed.data,
+        ...body,
       });
 
       res.json(permission);
