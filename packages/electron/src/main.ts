@@ -37,6 +37,8 @@ function setElectronEnv(): void {
     );
     process.env.MC_FRONTEND_DIST = path.join(resources, "frontend", "dist");
   }
+
+  process.env.BACKEND_PORT = String(BACKEND_PORT);
 }
 
 async function waitForServer(url: string, timeoutMs = 15_000): Promise<void> {
