@@ -6,7 +6,7 @@ import type {
   RefreshResponse,
   AuthStatusResponse,
 } from "@mc-server-manager/shared";
-import { authFetch } from "./client.js";
+import { request } from "./client.js";
 import { getBackendBaseUrlSync } from "@/utils/desktop";
 
 class ApiError extends Error {
@@ -101,7 +101,7 @@ export async function logout(refreshToken: string): Promise<void> {
 }
 
 export async function logoutAll(): Promise<{ revokedCount: number }> {
-  return authFetch<{ revokedCount: number }>("/api/auth/logout-all", {
+  return request<{ revokedCount: number }>("/api/auth/logout-all", {
     method: "POST",
   });
 }

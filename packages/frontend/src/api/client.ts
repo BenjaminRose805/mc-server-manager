@@ -51,42 +51,12 @@ class ApiError extends Error {
 
 import { getBackendBaseUrlSync } from "@/utils/desktop";
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  const token = localStorage.getItem("accessToken");
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const url = `${getBackendBaseUrlSync()}${path}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      ...headers,
-      ...(options?.headers as Record<string, string>),
-    },
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new ApiError(res.status, body.error || res.statusText, body.code);
-  }
-
-  if (res.status === 204) {
-    return undefined as T;
-  }
-
-  return res.json();
-}
-
 let isRefreshing = false;
 
-export async function authFetch<T>(
+export async function request<T>(
   path: string,
   options?: RequestInit,
+  skipRefresh?: boolean,
 ): Promise<T> {
   const token = localStorage.getItem("accessToken");
   const headers: Record<string, string> = {
@@ -107,7 +77,12 @@ export async function authFetch<T>(
     headers,
   });
 
-  if (res.status === 401 && !isRefreshing && path !== "/api/auth/refresh") {
+  if (
+    res.status === 401 &&
+    !isRefreshing &&
+    !skipRefresh &&
+    path !== "/api/auth/refresh"
+  ) {
     isRefreshing = true;
     try {
       const refreshToken = localStorage.getItem("refreshToken");
