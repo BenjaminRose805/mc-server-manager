@@ -14,6 +14,7 @@ import type {
 import { getAllSettings } from "../settings.js";
 import { logger } from "../../utils/logger.js";
 import { TTLCache } from "../../utils/cache.js";
+import { AppError, ValidationError } from "../../utils/errors.js";
 
 const BASE_URL = "https://api.curseforge.com/v1";
 const MINECRAFT_GAME_ID = 432;
@@ -144,7 +145,7 @@ export function isConfigured(): boolean {
 async function curseforgeFetch<T>(path: string): Promise<T> {
   const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("CurseForge API key not configured");
+    throw new ValidationError("CurseForge API key not configured");
   }
 
   const url = `${BASE_URL}${path}`;
@@ -159,8 +160,10 @@ async function curseforgeFetch<T>(path: string): Promise<T> {
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(
+    throw new AppError(
       `CurseForge API error ${res.status}: ${res.statusText} - ${body}`,
+      502,
+      "UPSTREAM_ERROR",
     );
   }
 
@@ -170,7 +173,7 @@ async function curseforgeFetch<T>(path: string): Promise<T> {
 async function curseforgePost<T>(path: string, body: unknown): Promise<T> {
   const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("CurseForge API key not configured");
+    throw new ValidationError("CurseForge API key not configured");
   }
 
   const url = `${BASE_URL}${path}`;
@@ -188,8 +191,10 @@ async function curseforgePost<T>(path: string, body: unknown): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(
+    throw new AppError(
       `CurseForge API error ${res.status}: ${res.statusText} - ${text}`,
+      502,
+      "UPSTREAM_ERROR",
     );
   }
 

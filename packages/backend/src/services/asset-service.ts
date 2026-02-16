@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
 const ASSET_BASE_URL = "https://resources.download.minecraft.net";
@@ -39,7 +40,11 @@ export class AssetService {
   ): Promise<AssetIndex> {
     const assetIndex = versionJson.assetIndex as VersionAssetIndex;
     if (!assetIndex) {
-      throw new Error("Version JSON missing assetIndex field");
+      throw new AppError(
+        "Version JSON missing assetIndex field",
+        502,
+        "UPSTREAM_ERROR",
+      );
     }
 
     const indexPath = join(this.indexesDir, `${assetIndex.id}.json`);
@@ -54,8 +59,10 @@ export class AssetService {
 
     const res = await fetch(assetIndex.url);
     if (!res.ok) {
-      throw new Error(
+      throw new AppError(
         `Failed to download asset index ${assetIndex.id}: ${res.status} ${res.statusText}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
@@ -63,8 +70,10 @@ export class AssetService {
 
     const hash = createHash("sha1").update(body).digest("hex");
     if (hash !== assetIndex.sha1) {
-      throw new Error(
+      throw new AppError(
         `Asset index SHA1 mismatch for ${assetIndex.id}: expected ${assetIndex.sha1}, got ${hash}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
@@ -133,13 +142,19 @@ export class AssetService {
     const url = `${ASSET_BASE_URL}/${prefix}/${hash}`;
     const res = await fetch(url, { signal });
     if (!res.ok) {
-      throw new Error(
+      throw new AppError(
         `Failed to download asset ${hash}: ${res.status} ${res.statusText}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
     if (!res.body) {
-      throw new Error(`No response body for asset ${hash}`);
+      throw new AppError(
+        `No response body for asset ${hash}`,
+        502,
+        "UPSTREAM_ERROR",
+      );
     }
 
     const nodeStream = Readable.fromWeb(
@@ -150,8 +165,10 @@ export class AssetService {
     const data = await readFile(objectPath);
     const actualHash = createHash("sha1").update(data).digest("hex");
     if (actualHash !== hash) {
-      throw new Error(
+      throw new AppError(
         `Asset SHA1 mismatch: expected ${hash}, got ${actualHash}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
   }

@@ -10,6 +10,7 @@ import type {
   VersionManifest,
   VersionType,
 } from "@mc-server-manager/shared";
+import { AppError, NotFoundError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
 const MANIFEST_URL =
@@ -36,8 +37,10 @@ export class VersionService {
 
     const res = await fetch(MANIFEST_URL);
     if (!res.ok) {
-      throw new Error(
+      throw new AppError(
         `Failed to fetch version manifest: ${res.status} ${res.statusText}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
@@ -71,14 +74,16 @@ export class VersionService {
 
     const manifest = await this.getManifest();
     const version = manifest.versions.find((v) => v.id === versionId);
-    if (!version) throw new Error(`Version ${versionId} not found in manifest`);
+    if (!version) throw new NotFoundError("version", versionId);
 
     await mkdir(versionDir, { recursive: true });
 
     const res = await fetch(version.url, { signal });
     if (!res.ok) {
-      throw new Error(
+      throw new AppError(
         `Failed to download version JSON for ${versionId}: ${res.status} ${res.statusText}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
@@ -86,8 +91,10 @@ export class VersionService {
 
     const hash = createHash("sha1").update(body).digest("hex");
     if (hash !== version.sha1) {
-      throw new Error(
+      throw new AppError(
         `Version JSON SHA1 mismatch for ${versionId}: expected ${version.sha1}, got ${hash}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
@@ -123,7 +130,7 @@ export class VersionService {
       | Record<string, { url: string; sha1: string; size: number }>
       | undefined;
     if (!downloads?.client) {
-      throw new Error(`No client download available for ${versionId}`);
+      throw new NotFoundError("client download", versionId);
     }
 
     const clientDownload = downloads.client;
@@ -135,14 +142,18 @@ export class VersionService {
 
     const res = await fetch(clientDownload.url, { signal });
     if (!res.ok) {
-      throw new Error(
+      throw new AppError(
         `Failed to download client JAR for ${versionId}: ${res.status} ${res.statusText}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
     if (!res.body) {
-      throw new Error(
+      throw new AppError(
         `No response body for client JAR download of ${versionId}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
@@ -154,8 +165,10 @@ export class VersionService {
     const jarData = await readFile(jarPath);
     const hash = createHash("sha1").update(jarData).digest("hex");
     if (hash !== clientDownload.sha1) {
-      throw new Error(
+      throw new AppError(
         `Client JAR SHA1 mismatch for ${versionId}: expected ${clientDownload.sha1}, got ${hash}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 

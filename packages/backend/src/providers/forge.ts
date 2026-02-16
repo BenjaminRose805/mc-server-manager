@@ -24,6 +24,7 @@ import { compareMcVersions } from "@mc-server-manager/shared";
 import type { ServerProvider, LaunchConfig } from "./provider.js";
 import { registerProvider } from "./registry.js";
 import { TTLCache } from "../utils/cache.js";
+import { AppError, NotFoundError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
 /** Forge metadata URL for all versions. */
@@ -180,7 +181,13 @@ function runForgeInstaller(
 
     installerProc.on("error", (err) => {
       logger.error({ jobId: job.id, err }, "Forge installer process error");
-      reject(new Error(`Forge installer failed to start: ${err.message}`));
+      reject(
+        new AppError(
+          `Forge installer failed to start: ${err.message}`,
+          502,
+          "UPSTREAM_ERROR",
+        ),
+      );
     });
 
     installerProc.on("exit", (code, signal) => {
@@ -195,8 +202,10 @@ function runForgeInstaller(
       } else {
         const tail = job.log.slice(-5).join("\n");
         reject(
-          new Error(
+          new AppError(
             `Forge installer exited with code ${code}${signal ? ` (signal: ${signal})` : ""}. Last output:\n${tail}`,
+            502,
+            "UPSTREAM_ERROR",
           ),
         );
       }
@@ -235,7 +244,7 @@ class ForgeProvider implements ServerProvider {
     const forgeVersions = grouped.get(mcVersion);
 
     if (!forgeVersions || forgeVersions.length === 0) {
-      throw new Error(`No Forge versions found for Minecraft ${mcVersion}`);
+      throw new NotFoundError("Forge versions", mcVersion);
     }
 
     const sorted = forgeVersions.slice().sort((a, b) => {
@@ -263,7 +272,11 @@ class ForgeProvider implements ServerProvider {
     job: DownloadJob,
   ): Promise<string> {
     if (request.serverType !== "forge") {
-      throw new Error("ForgeProvider can only handle forge downloads");
+      throw new AppError(
+        "ForgeProvider can only handle forge downloads",
+        400,
+        "INVALID_PROVIDER",
+      );
     }
 
     const forgeVersion = request.forgeVersion;
@@ -298,9 +311,11 @@ class ForgeProvider implements ServerProvider {
 
     const res = await fetch(installerUrl);
     if (!res.ok || !res.body) {
-      throw new Error(
+      throw new AppError(
         `Failed to download Forge installer: ${res.status} ${res.statusText}. ` +
           `URL: ${installerUrl}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
@@ -374,9 +389,11 @@ class ForgeProvider implements ServerProvider {
             `Args file not found, using JAR: ${path.basename(legacyJar)}`,
           );
         } else {
-          throw new Error(
+          throw new AppError(
             "Forge installer completed but could not find the server args file or JAR. " +
               "The installer may have failed silently. Check the install log for details.",
+            502,
+            "UPSTREAM_ERROR",
           );
         }
       }
@@ -390,9 +407,11 @@ class ForgeProvider implements ServerProvider {
         serverJarPath = legacyJar;
         job.log.push(`Found server JAR: ${path.basename(legacyJar)}`);
       } else {
-        throw new Error(
+        throw new AppError(
           "Forge installer completed but could not find the server JAR. " +
             "The installer may have failed silently. Check the install log for details.",
+          502,
+          "UPSTREAM_ERROR",
         );
       }
     }
@@ -472,8 +491,10 @@ class ForgeProvider implements ServerProvider {
       logger.info("Fetching Forge versions from Maven...");
       const res = await fetch(FORGE_METADATA_URL);
       if (!res.ok) {
-        throw new Error(
+        throw new AppError(
           `Failed to fetch Forge version metadata: ${res.status} ${res.statusText}`,
+          502,
+          "UPSTREAM_ERROR",
         );
       }
       const xml = await res.text();

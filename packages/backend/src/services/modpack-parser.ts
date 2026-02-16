@@ -6,6 +6,7 @@ import type {
   ModLoader,
 } from "@mc-server-manager/shared";
 import { logger } from "../utils/logger.js";
+import { ValidationError } from "../utils/errors.js";
 
 // ── Modrinth index.json shapes ──────────────────────────────────────
 
@@ -127,7 +128,9 @@ export async function parseMrpack(zipPath: string): Promise<ParsedModpack> {
     }
 
     if (!indexEntry) {
-      throw new Error("modrinth.index.json not found in .mrpack file");
+      throw new ValidationError(
+        "modrinth.index.json not found in .mrpack file",
+      );
     }
 
     const rawJson = await readEntryAsString(indexEntry);
@@ -193,7 +196,9 @@ export async function parseCurseForgeManifest(
     }
 
     if (!manifestEntry) {
-      throw new Error("manifest.json not found in CurseForge modpack ZIP");
+      throw new ValidationError(
+        "manifest.json not found in CurseForge modpack ZIP",
+      );
     }
 
     const rawJson = await readEntryAsString(manifestEntry);

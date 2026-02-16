@@ -23,6 +23,7 @@ import type {
 import type { ServerProvider, LaunchConfig } from "./provider.js";
 import { registerProvider } from "./registry.js";
 import { TTLCache } from "../utils/cache.js";
+import { AppError, NotFoundError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
 /** NeoForge Maven API URL for all release versions. */
@@ -169,7 +170,13 @@ function runNeoForgeInstaller(
 
     installerProc.on("error", (err) => {
       logger.error({ jobId: job.id, err }, "NeoForge installer process error");
-      reject(new Error(`NeoForge installer failed to start: ${err.message}`));
+      reject(
+        new AppError(
+          `NeoForge installer failed to start: ${err.message}`,
+          502,
+          "UPSTREAM_ERROR",
+        ),
+      );
     });
 
     installerProc.on("exit", (code, signal) => {
@@ -184,8 +191,10 @@ function runNeoForgeInstaller(
       } else {
         const tail = job.log.slice(-5).join("\n");
         reject(
-          new Error(
+          new AppError(
             `NeoForge installer exited with code ${code}${signal ? ` (signal: ${signal})` : ""}. Last output:\n${tail}`,
+            502,
+            "UPSTREAM_ERROR",
           ),
         );
       }
@@ -231,7 +240,7 @@ class NeoForgeProvider implements ServerProvider {
     const neoforgeVersions = grouped.get(mcVersion);
 
     if (!neoforgeVersions || neoforgeVersions.length === 0) {
-      throw new Error(`No NeoForge versions found for Minecraft ${mcVersion}`);
+      throw new NotFoundError("NeoForge versions", mcVersion);
     }
 
     const sorted = sortNeoForgeVersionsDesc(neoforgeVersions);
@@ -250,7 +259,11 @@ class NeoForgeProvider implements ServerProvider {
     job: DownloadJob,
   ): Promise<string> {
     if (request.serverType !== "neoforge") {
-      throw new Error("NeoForgeProvider can only handle neoforge downloads");
+      throw new AppError(
+        "NeoForgeProvider can only handle neoforge downloads",
+        400,
+        "INVALID_PROVIDER",
+      );
     }
 
     const neoforgeVersion = request.neoforgeVersion;
@@ -283,9 +296,11 @@ class NeoForgeProvider implements ServerProvider {
 
     const res = await fetch(installerUrl);
     if (!res.ok || !res.body) {
-      throw new Error(
+      throw new AppError(
         `Failed to download NeoForge installer: ${res.status} ${res.statusText}. ` +
           `URL: ${installerUrl}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
@@ -343,9 +358,11 @@ class NeoForgeProvider implements ServerProvider {
       serverJarPath = argsFile;
       job.log.push(`Found args file: ${path.relative(destDir, argsFile)}`);
     } else {
-      throw new Error(
+      throw new AppError(
         "NeoForge installer completed but could not find the server args file. " +
           "The installer may have failed silently. Check the install log for details.",
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
@@ -426,8 +443,10 @@ class NeoForgeProvider implements ServerProvider {
       logger.info("Fetching NeoForge versions from Maven...");
       const res = await fetch(NEOFORGE_VERSIONS_URL);
       if (!res.ok) {
-        throw new Error(
+        throw new AppError(
           `Failed to fetch NeoForge version metadata: ${res.status} ${res.statusText}`,
+          502,
+          "UPSTREAM_ERROR",
         );
       }
       const data: { versions: string[] } = await res.json();

@@ -7,6 +7,7 @@ import { pipeline } from "node:stream/promises";
 import { createWriteStream } from "node:fs";
 import type { JavaInfo, JavaInstallation } from "@mc-server-manager/shared";
 import { logger } from "../utils/logger.js";
+import { AppError, ValidationError } from "../utils/errors.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -417,12 +418,12 @@ function getAdoptiumPlatform(): { os: string; arch: string } {
   if (platform === "win32") adoptiumOs = "windows";
   else if (platform === "darwin") adoptiumOs = "mac";
   else if (platform === "linux") adoptiumOs = "linux";
-  else throw new Error(`Unsupported OS: ${platform}`);
+  else throw new ValidationError(`Unsupported OS: ${platform}`);
 
   let adoptiumArch: string;
   if (arch === "x64") adoptiumArch = "x64";
   else if (arch === "arm64") adoptiumArch = "aarch64";
-  else throw new Error(`Unsupported architecture: ${arch}`);
+  else throw new ValidationError(`Unsupported architecture: ${arch}`);
 
   return { os: adoptiumOs, arch: adoptiumArch };
 }
@@ -439,12 +440,18 @@ export async function downloadJava(
 
   const response = await fetch(url, { redirect: "follow" });
   if (!response.ok) {
-    throw new Error(
+    throw new AppError(
       `Failed to download Java ${version}: HTTP ${response.status}`,
+      502,
+      "UPSTREAM_ERROR",
     );
   }
   if (!response.body) {
-    throw new Error("Empty response body from Adoptium");
+    throw new AppError(
+      "Empty response body from Adoptium",
+      502,
+      "UPSTREAM_ERROR",
+    );
   }
 
   const runtimeDir = path.join(
@@ -483,7 +490,11 @@ export async function downloadJava(
 
     const javaBinary = findJavaBinaryInDir(runtimeDir);
     if (!javaBinary) {
-      throw new Error("Could not find java binary after extraction");
+      throw new AppError(
+        "Could not find java binary after extraction",
+        502,
+        "UPSTREAM_ERROR",
+      );
     }
 
     if (!isWindows) {

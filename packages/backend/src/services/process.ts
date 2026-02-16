@@ -16,6 +16,7 @@ import { EventEmitter } from "node:events";
 import type { ServerStatus } from "@mc-server-manager/shared";
 import { ConsoleBuffer, type ConsoleLine } from "./console-buffer.js";
 import { logger } from "../utils/logger.js";
+import { ConflictError } from "../utils/errors.js";
 
 // --- Regex patterns for parsing server output ---
 
@@ -166,7 +167,7 @@ export class ServerProcess extends EventEmitter {
    */
   start(javaPath: string, args: string[], cwd: string): void {
     if (this._status !== "stopped" && this._status !== "crashed") {
-      throw new Error(
+      throw new ConflictError(
         `Cannot start server ${this.serverId}: current status is "${this._status}"`,
       );
     }
@@ -234,7 +235,7 @@ export class ServerProcess extends EventEmitter {
    */
   sendCommand(command: string): void {
     if (!this.proc?.stdin?.writable) {
-      throw new Error(
+      throw new ConflictError(
         `Cannot send command to server ${this.serverId}: not running`,
       );
     }
@@ -250,7 +251,7 @@ export class ServerProcess extends EventEmitter {
    */
   stop(): void {
     if (this._status !== "running" && this._status !== "starting") {
-      throw new Error(
+      throw new ConflictError(
         `Cannot stop server ${this.serverId}: current status is "${this._status}"`,
       );
     }
@@ -288,7 +289,7 @@ export class ServerProcess extends EventEmitter {
    */
   kill(): void {
     if (!this.proc || !this.isAlive) {
-      throw new Error(
+      throw new ConflictError(
         `Cannot kill server ${this.serverId}: no running process`,
       );
     }

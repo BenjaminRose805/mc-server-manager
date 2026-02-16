@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import AdmZip from "adm-zip";
+import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
 type Platform = "windows" | "osx" | "linux";
@@ -56,7 +57,11 @@ export class LibraryService {
   ): Promise<string[]> {
     const libraries = versionJson.libraries as LibraryEntry[] | undefined;
     if (!libraries) {
-      throw new Error("Version JSON missing libraries field");
+      throw new AppError(
+        "Version JSON missing libraries field",
+        502,
+        "UPSTREAM_ERROR",
+      );
     }
 
     const filtered = this.filterLibrariesForPlatform(libraries);
@@ -256,8 +261,10 @@ export class LibraryService {
     const hash = createHash("sha1").update(data).digest("hex");
     if (hash !== artifact.sha1) {
       await unlink(destPath);
-      throw new Error(
+      throw new AppError(
         `Library SHA1 mismatch for ${artifact.path}: expected ${artifact.sha1}, got ${hash}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
   }

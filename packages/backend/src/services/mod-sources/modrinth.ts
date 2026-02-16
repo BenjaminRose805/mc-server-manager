@@ -14,6 +14,7 @@ import type {
 } from "@mc-server-manager/shared";
 import { TTLCache } from "../../utils/cache.js";
 import { logger } from "../../utils/logger.js";
+import { AppError } from "../../utils/errors.js";
 
 const BASE_URL = "https://api.modrinth.com/v2";
 const USER_AGENT =
@@ -140,8 +141,10 @@ async function modrinthFetch<T>(path: string): Promise<T> {
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(
+    throw new AppError(
       `Modrinth API error ${res.status}: ${res.statusText} - ${body}`,
+      502,
+      "UPSTREAM_ERROR",
     );
   }
 

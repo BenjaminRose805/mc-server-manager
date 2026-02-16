@@ -2,11 +2,12 @@ import type {
   McVersion,
   MojangVersionManifest,
   MojangVersionEntry,
-} from '@mc-server-manager/shared';
-import { logger } from '../utils/logger.js';
+} from "@mc-server-manager/shared";
+import { logger } from "../utils/logger.js";
+import { AppError } from "../utils/errors.js";
 
 const MOJANG_MANIFEST_URL =
-  'https://launchermeta.mojang.com/mc/game/version_manifest_v2.json';
+  "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
 
 /**
  * Cache for the version manifest.
@@ -25,18 +26,25 @@ export async function getVersionManifest(): Promise<MojangVersionManifest> {
     return cachedManifest;
   }
 
-  logger.info('Fetching Mojang version manifest...');
+  logger.info("Fetching Mojang version manifest...");
 
   const res = await fetch(MOJANG_MANIFEST_URL);
   if (!res.ok) {
-    throw new Error(`Failed to fetch version manifest: ${res.status} ${res.statusText}`);
+    throw new AppError(
+      `Failed to fetch version manifest: ${res.status} ${res.statusText}`,
+      502,
+      "UPSTREAM_ERROR",
+    );
   }
 
   const manifest = (await res.json()) as MojangVersionManifest;
   cachedManifest = manifest;
   cachedAt = now;
 
-  logger.info({ versionCount: manifest.versions.length }, 'Version manifest cached');
+  logger.info(
+    { versionCount: manifest.versions.length },
+    "Version manifest cached",
+  );
   return manifest;
 }
 
@@ -45,19 +53,19 @@ export async function getVersionManifest(): Promise<MojangVersionManifest> {
  * Filters to releases and snapshots, sorted by release date descending (newest first).
  */
 export async function getVanillaVersions(
-  includeSnapshots = false
+  includeSnapshots = false,
 ): Promise<McVersion[]> {
   const manifest = await getVersionManifest();
 
   return manifest.versions
     .filter((v) => {
-      if (v.type === 'release') return true;
-      if (v.type === 'snapshot' && includeSnapshots) return true;
+      if (v.type === "release") return true;
+      if (v.type === "snapshot" && includeSnapshots) return true;
       return false;
     })
     .map((v) => ({
       id: v.id,
-      type: v.type as 'release' | 'snapshot',
+      type: v.type as "release" | "snapshot",
       releaseTime: v.releaseTime,
     }));
 }
@@ -66,7 +74,7 @@ export async function getVanillaVersions(
  * Get the Mojang version entry (with download URL) for a specific version.
  */
 export async function getVersionEntry(
-  versionId: string
+  versionId: string,
 ): Promise<MojangVersionEntry | null> {
   const manifest = await getVersionManifest();
   return manifest.versions.find((v) => v.id === versionId) ?? null;
@@ -90,24 +98,28 @@ interface MojangVersionDetail {
  * Returns null if no server JAR is available (very old versions don't have one).
  */
 export async function getServerJarInfo(
-  versionId: string
+  versionId: string,
 ): Promise<{ url: string; sha1: string; size: number } | null> {
   const entry = await getVersionEntry(versionId);
   if (!entry) {
-    logger.warn({ versionId }, 'Version not found in manifest');
+    logger.warn({ versionId }, "Version not found in manifest");
     return null;
   }
 
   // Fetch the per-version detail JSON
   const res = await fetch(entry.url);
   if (!res.ok) {
-    throw new Error(`Failed to fetch version detail for ${versionId}: ${res.status}`);
+    throw new AppError(
+      `Failed to fetch version detail for ${versionId}: ${res.status}`,
+      502,
+      "UPSTREAM_ERROR",
+    );
   }
 
   const detail = (await res.json()) as MojangVersionDetail;
   const serverDownload = detail.downloads.server;
   if (!serverDownload) {
-    logger.warn({ versionId }, 'No server JAR available for this version');
+    logger.warn({ versionId }, "No server JAR available for this version");
     return null;
   }
 

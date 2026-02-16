@@ -3,6 +3,7 @@ import path from "node:path";
 import type { LoaderType } from "@mc-server-manager/shared";
 import { config } from "../config.js";
 import * as instanceModel from "../models/instance.js";
+import { AppError, NotFoundError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
 interface FabricLoaderEntry {
@@ -44,8 +45,10 @@ export async function getClientLoaderVersions(
   mcVersion: string,
 ): Promise<Array<{ version: string; stable: boolean }>> {
   if (loader !== "fabric") {
-    throw new Error(
+    throw new AppError(
       `Unsupported client loader: ${loader}. Only 'fabric' is currently supported.`,
+      502,
+      "UPSTREAM_ERROR",
     );
   }
 
@@ -53,8 +56,10 @@ export async function getClientLoaderVersions(
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error(
+    throw new AppError(
       `Failed to fetch Fabric loader versions for MC ${mcVersion}: ${response.status} ${response.statusText}`,
+      502,
+      "UPSTREAM_ERROR",
     );
   }
 
@@ -72,8 +77,10 @@ export async function installClientLoader(
   loaderVersion?: string,
 ): Promise<void> {
   if (loader !== "fabric") {
-    throw new Error(
+    throw new AppError(
       `Unsupported client loader: ${loader}. Only 'fabric' is currently supported.`,
+      502,
+      "UPSTREAM_ERROR",
     );
   }
 
@@ -82,16 +89,14 @@ export async function installClientLoader(
 
   const versions = await getClientLoaderVersions(loader, mcVersion);
   if (versions.length === 0) {
-    throw new Error(`No Fabric loader versions available for MC ${mcVersion}`);
+    throw new NotFoundError("Fabric loader versions", mcVersion);
   }
 
   let selectedVersion: string;
   if (loaderVersion) {
     const found = versions.find((v) => v.version === loaderVersion);
     if (!found) {
-      throw new Error(
-        `Fabric loader version ${loaderVersion} not found for MC ${mcVersion}`,
-      );
+      throw new NotFoundError("Fabric loader version", loaderVersion);
     }
     selectedVersion = loaderVersion;
   } else {
@@ -108,8 +113,10 @@ export async function installClientLoader(
   const profileResponse = await fetch(profileUrl);
 
   if (!profileResponse.ok) {
-    throw new Error(
+    throw new AppError(
       `Failed to fetch Fabric profile for MC ${mcVersion} loader ${selectedVersion}: ${profileResponse.status} ${profileResponse.statusText}`,
+      502,
+      "UPSTREAM_ERROR",
     );
   }
 
@@ -146,8 +153,10 @@ export async function installClientLoader(
 
     const libResponse = await fetch(libUrl);
     if (!libResponse.ok) {
-      throw new Error(
+      throw new AppError(
         `Failed to download library ${lib.name}: ${libResponse.status} ${libResponse.statusText}`,
+        502,
+        "UPSTREAM_ERROR",
       );
     }
 
