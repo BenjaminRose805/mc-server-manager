@@ -89,7 +89,7 @@ Build order is enforced via TypeScript project references: `shared` must be buil
 ```
 package.json              -- Root workspace config, dev/build/lint scripts
 tsconfig.base.json        -- Shared TS config (ES2022, strict, bundler resolution)
-PLAN.md                   -- 621-line architecture document and phased build plan
+ROADMAP.md                -- Product roadmap, known gaps, risk areas, technical decisions
 packages/
   backend/                -- Express API server
   frontend/               -- React SPA
@@ -189,7 +189,7 @@ POST              /api/launcher/java/download
 | `packages/electron/src/launcher.ts` | Minecraft game launcher -- spawn/track/kill game processes |
 | `packages/electron/src/secure-storage.ts` | OS-level credential encryption via Electron safeStorage |
 | `packages/electron/src/ipc.ts` | IPC handler registration -- bridges main↔renderer |
-| `PLAN.md` | Complete architecture document and build plan |
+| `ROADMAP.md` | Product roadmap, known gaps, risk areas, technical decisions |
 
 ## Risk Areas
 
